@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         Bloodmallet Traditional Chinese Wowhead
 // @namespace    https://bloodmallet.com/
-// @version      0.3.3
+// @version      0.3.4
 // @description  Add zh-hant mode, switch item links/names to tw.wowhead.com, and translate class/spec labels.
 // @author       mcc
 // @match        https://bloodmallet.com/*
 // @match        http://bloodmallet.com/*
 // @run-at       document-idle
 // @grant        none
+// @license      MIT
 // ==/UserScript==
 
 (function () {
@@ -206,74 +207,6 @@
         element.textContent = translated;
       }
     }
-  }
-
-  function applyZhTwToTalentIframe(iframe) {
-    if (!(iframe instanceof HTMLIFrameElement)) {
-      return false;
-    }
-
-    const src = iframe.getAttribute('src') || '';
-    if (!src.includes('raidbots.com/simbot/render/talents/')) {
-      return false;
-    }
-
-    try {
-      const url = new URL(src, window.location.href);
-      const prevLocale = url.searchParams.get('locale');
-      const prevLang = url.searchParams.get('lang');
-      if (prevLocale === 'zh_TW' && prevLang === 'zh_TW') {
-        return false;
-      }
-
-      // raidbots render page may ignore one of them; set both for compatibility.
-      url.searchParams.set('locale', 'zh_TW');
-      url.searchParams.set('lang', 'zh_TW');
-      iframe.src = url.toString();
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  function patchExistingTalentIframes(root = document) {
-    const iframes = root.querySelectorAll('iframe[src*="raidbots.com/simbot/render/talents/"]');
-    for (const iframe of iframes) {
-      applyZhTwToTalentIframe(iframe);
-    }
-  }
-
-  function patchTalentIframeFactoryWhenReady() {
-    let retries = 0;
-    const maxRetries = 120;
-
-    const intervalId = window.setInterval(() => {
-      retries += 1;
-
-      const factory = window.create_talent_iframe;
-      if (typeof factory !== 'function') {
-        if (retries >= maxRetries) {
-          window.clearInterval(intervalId);
-        }
-        return;
-      }
-
-      if (factory.__twTalentIframePatched) {
-        window.clearInterval(intervalId);
-        return;
-      }
-
-      const wrapped = function patchedCreateTalentIframe(talentString, title) {
-        const iframe = factory.call(this, talentString, title);
-        applyZhTwToTalentIframe(iframe);
-        return iframe;
-      };
-      wrapped.__twTalentIframePatched = true;
-      window.create_talent_iframe = wrapped;
-      window.clearInterval(intervalId);
-
-      patchExistingTalentIframes(document);
-    }, 100);
   }
 
   function isTwModeEnabled() {
@@ -485,7 +418,6 @@
       patchExistingLinks(document);
       translateClassAndSpecLabels();
       translateCharacterProfile();
-      patchExistingTalentIframes(document);
     }, 100);
   }
 
@@ -526,7 +458,6 @@
         patchExistingLinks(document);
         translateClassAndSpecLabels();
         translateCharacterProfile();
-        patchExistingTalentIframes(document);
       }
     });
 
@@ -540,7 +471,6 @@
     patchExistingLinks(document);
     translateClassAndSpecLabels();
     translateCharacterProfile();
-    patchExistingTalentIframes(document);
   }
 
   function enableTwModeOnChartPages() {
@@ -551,7 +481,6 @@
     }
 
     patchChartPrototypeWhenReady();
-    patchTalentIframeFactoryWhenReady();
     observeChartUpdates();
   }
 
