@@ -375,9 +375,10 @@
     return false;
   }
 
-  // 用 WeakSet 記錄已翻譯的文字節點，避免同一 render 週期內重複處理
-  // 換頁時會重建此 WeakSet，讓 React 重用的節點能被重新翻譯
-  let translatedNodes = new WeakSet();
+  // 用 WeakMap 記錄每個文字節點「最後一次處理時的內容」。
+  // 好處：同一個 text node 若被 React 更新內容，會被重新翻譯；
+  // 同內容重複 observer 觸發則會被跳過，降低重複掃描成本。
+  let translatedNodeText = new WeakMap();
 
   function walkTextNodes(root) {
     const walker = document.createTreeWalker(
@@ -400,16 +401,19 @@
     const updates = [];
     let node;
     while ((node = walker.nextNode())) {
-      if (translatedNodes.has(node)) continue;
       const orig = node.textContent;
+      if (translatedNodeText.get(node) === orig) continue;
+
       const translated = translateString(orig);
       if (translated !== null && translated !== orig) {
         updates.push({ node, translated });
+      } else {
+        translatedNodeText.set(node, orig);
       }
     }
     for (const { node, translated } of updates) {
       node.textContent = translated;
-      translatedNodes.add(node);
+      translatedNodeText.set(node, translated);
     }
   }
 
@@ -590,8 +594,8 @@
   function onUrlChange() {
     if (location.href === lastUrl) return;
     lastUrl = location.href;
-    // 重建 WeakSet，讓 React 重用的舊節點能被重新翻譯
-    translatedNodes = new WeakSet();
+    // 重建 WeakMap，讓換頁後的節點內容重新進入翻譯流程
+    translatedNodeText = new WeakMap();
     // React 分多批渲染，多個時間點掃描確保都能翻到
     setTimeout(runTranslation, 200);
     setTimeout(runTranslation, 600);
