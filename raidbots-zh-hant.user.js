@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      0.3.8
+// @version      0.4.6
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
@@ -13,6 +13,145 @@
 
 (function () {
   'use strict';
+
+  const TW_PREF_KEY = 'tw-translation-enabled';
+
+  function readTranslationPref() {
+    try {
+      const stored = localStorage.getItem(TW_PREF_KEY);
+      return stored === null ? true : stored === 'true';
+    } catch (err) {
+      return true;
+    }
+  }
+
+  function persistTranslationPrefAndReload(enabled, defer) {
+    try {
+      localStorage.setItem(TW_PREF_KEY, enabled ? 'true' : 'false');
+    } catch (err) {}
+    if (defer) {
+      setTimeout(() => location.reload(), 80);
+    } else {
+      location.reload();
+    }
+  }
+
+  const translationEnabled = readTranslationPref();
+
+  function findRaidbotsLanguageMenu() {
+    const menus = document.querySelectorAll('.Menu');
+    for (const menu of menus) {
+      const items = menu.querySelectorAll('.NavItem');
+      for (const item of items) {
+        const text = (item.textContent || '').trim();
+        if (text === 'Deutsch' || text === 'Português (Brasil)') {
+          return menu;
+        }
+      }
+    }
+    return null;
+  }
+
+  function bindRaidbotsLanguageItems(menu) {
+    const items = menu.querySelectorAll('.NavItem:not([data-tw-lang-option])');
+    for (const item of items) {
+      if (item.dataset.twDisableListener === 'true') continue;
+      item.dataset.twDisableListener = 'true';
+      item.addEventListener('click', () => {
+        if (!translationEnabled) return;
+        persistTranslationPrefAndReload(false, true);
+      });
+    }
+  }
+
+  function setLanguageTriggerLabel(trigger) {
+    if (!trigger) return;
+    for (const node of trigger.childNodes) {
+      if (node.nodeType === Node.TEXT_NODE && (node.textContent || '').trim()) {
+        if (node.textContent !== '正體中文') {
+          node.textContent = '正體中文';
+        }
+        return;
+      }
+    }
+    trigger.insertBefore(document.createTextNode('正體中文'), trigger.firstChild);
+  }
+
+  function injectTwLanguageOption() {
+    const menu = findRaidbotsLanguageMenu();
+    if (!menu) return false;
+    bindRaidbotsLanguageItems(menu);
+
+    if (translationEnabled) {
+      const dropdown = menu.closest('.Dropdown');
+      if (dropdown) {
+        const trigger = dropdown.querySelector('a.NavItem');
+        if (trigger) {
+          setLanguageTriggerLabel(trigger);
+        }
+      }
+    }
+
+    if (menu.querySelector('[data-tw-lang-option="zhtw"]')) return true;
+
+    const item = document.createElement('a');
+    item.className = 'NavItem';
+    item.dataset.twLangOption = 'zhtw';
+    item.textContent = translationEnabled ? '✓ 正體中文' : '正體中文';
+    item.title = translationEnabled
+      ? '已啟用正體中文翻譯（點擊停用）'
+      : '啟用正體中文翻譯';
+    item.style.cssText = [
+      'box-sizing: border-box',
+      'font-size: 12px',
+      'font-weight: 700',
+      'line-height: 1rem',
+      'text-decoration: none',
+      'display: flex',
+      'align-items: center',
+      'align-self: stretch',
+      'padding: 10px',
+      'cursor: pointer',
+      'text-transform: uppercase',
+      'letter-spacing: 0.2em',
+      'color: ' + (translationEnabled ? '#0f8' : '#fb3'),
+    ].join('; ');
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      persistTranslationPrefAndReload(!translationEnabled, false);
+    });
+    menu.insertBefore(item, menu.firstChild);
+    return true;
+  }
+
+  function startTwLanguageInjector() {
+    if (!document.body) {
+      document.addEventListener('DOMContentLoaded', startTwLanguageInjector, { once: true });
+      return;
+    }
+    injectTwLanguageOption();
+    setTimeout(injectTwLanguageOption, 500);
+    setTimeout(injectTwLanguageOption, 2000);
+
+    let injectScheduled = false;
+    const scheduleInject = () => {
+      if (injectScheduled) return;
+      injectScheduled = true;
+      requestAnimationFrame(() => {
+        injectScheduled = false;
+        injectTwLanguageOption();
+      });
+    };
+    const observer = new MutationObserver(scheduleInject);
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  startTwLanguageInjector();
+
+  if (!translationEnabled) {
+    return;
+  }
 
   if (typeof window.whTooltips === 'undefined') {
     window.whTooltips = {};
@@ -133,6 +272,9 @@
     the_blinding_vale: '盲目谷地',
     murder_row: '兇殺路',
     voidscar_arena: '虛無之痕競技場',
+    the_voidspire: '虛無之尖',
+    march_on_queldanas: '進軍奎爾達納斯',
+    the_dreamrift: '夢境裂隙',
   });
 
   const RACE_TW_MAP = Object.freeze({
@@ -169,7 +311,6 @@
     Droptimizer: '掉落最佳化',
     Advanced: '進階',
     More: '更多',
-    English: '英文',
     Stats: '屬性',
     Gear: '裝備',
     Enhancements: '強化',
@@ -410,6 +551,93 @@
     "Silvermoon's Alacrity": '銀月敏捷',
     "Silvermoon's Tenacity": '銀月堅韌',
     "Zul'jin's Mastery": '祖爾金專精',
+    Voidforged: '卓越虛無鍛造',
+    'Voidforged (Hero)': '卓越虛無鍛造（英雄）',
+    'Voidforged (Myth)': '卓越虛無鍛造（神話）',
+    'Boss Summary': '首領總覽',
+    'Boss Order': '首領順序',
+    Sources: '來源',
+    'Show Previous Tiers': '顯示先前階段',
+    'Raid Difficulty': '團隊副本難度',
+    'Raid Finder': '搜尋者',
+    Normal: '普通',
+    Heroic: '英雄',
+    Mythic: '神話',
+    'Items to Sim': '模擬物品',
+    'Group By': '分組依據',
+    'Item Slot': '物品欄位',
+    Boss: '首領',
+    'Main Hand Weapon': '主手武器',
+    'Off Hand Weapon': '副手武器',
+    Trinket: '飾品',
+    'Trinket 1': '飾品 1',
+    'Trinket 2': '飾品 2',
+    'Notes / Limitations': '注意事項 / 限制',
+    'Run Droptimizer': '執行掉落最佳化',
+    'Load from Armory': '從戰網檔案匯入',
+    Region: '地區',
+    Realm: '伺服器',
+    Character: '角色',
+    'Season 1 Raids': '第 1 季團隊副本',
+    'World Bosses': '世界首領',
+    'Mythic+ Dungeons': '傳奇鑰石地城',
+    'Normal Dungeons': '普通地下城',
+    'Epic Profession Items': '史詩專業物品',
+    'Rare Profession Items': '稀有專業物品',
+    'PVP Profession Items': 'PVP 專業物品',
+    'Catalyst Season 1': '第 1 季催化劑',
+    'Delves Season 1': '第 1 季探索',
+    'Prey Season 1': '第 1 季獵物',
+    'PVP Season 1 (Conquest)': '第 1 季 PVP（征服）',
+    'PVP Season 1 (Bloody Tokens)': '第 1 季 PVP（血腥代幣）',
+    'PVP Season 1 (Honor)': '第 1 季 PVP（榮譽）',
+    'Include Off-Spec Items': '包含非主專精物品',
+    'Include Catalyst Items': '包含催化劑物品',
+    'Add Vault Socket': '新增寶庫插槽',
+    'Preferred Gem': '偏好寶石',
+    'Upgrade up to:': '升級至：',
+    'Upgrade All Equipped Gear to the Same Level': '將所有已裝備裝備升級至相同等級',
+    'Base level, no upgrades': '基礎等級，無升級',
+    'Click any row or item to toggle inclusion in the sim': '點擊任一列或物品以切換是否納入模擬',
+    'Include All Items': '包含所有物品',
+    'Exclude All Items': '排除所有物品',
+    'Choose a source and Droptimizer will evaluate all Personal Loot against your currently equipped gear.':
+      '選擇來源後，掉落最佳化會將所有個人戰利品與你目前裝備進行比較。',
+    'More info on how Droptimizer works': '更多關於掉落最佳化的運作說明',
+    'How does Droptimizer work?': '掉落最佳化如何運作？',
+    'Highlighted icons indicate 0.05% or better DPS increase.': '高亮圖示代表 0.05% 以上的 DPS 提升。',
+    'DPS compared to your current gear.': '與目前裝備相比的 DPS。',
+    'These fields allow for a proper comparison to be made for main hand / off hand items when you have a two-hander equipped':
+      '這些欄位讓你在裝備雙手武器時，能正確比較主手／副手物品。',
+    'The enchant from your two-hander will be used on the main hand item to maintain consistency in the sim':
+      '雙手武器的附魔會套用至主手物品，以維持模擬一致性。',
+    'Your equipped weapons are used. To test Two Hand vs Main/Off Hand you will need to run multiple sims.':
+      '使用你目前裝備的武器。若要測試雙手武器與主手／副手的差異，需執行多次模擬。',
+    'Enchants are copied from your current items.': '附魔會沿用目前物品的設定。',
+    'Necklace/rings sockets and gems are copied from your current neck or first ring.':
+      '項鍊／戒指的插槽與寶石會沿用目前項鍊或第一只戒指。',
+    'Rings and trinkets are tried in both slots (as long as a Unique-Equipped constraint is not violated).':
+      '戒指與飾品會在兩個欄位都嘗試（除非違反唯一裝備限制）。',
+    'Dual wield classes try weapons in both hands.': '雙持職業會在雙手都嘗試武器。',
+    'Simulation time is slower when there are more potential upgrades.':
+      '潛在升級越多，模擬時間越長。',
+    'Droptimizer always uses Smart Sim': '掉落最佳化一律使用 Smart Sim',
+    'Vantus Rune not used': '未使用萬塔斯符文',
+    'First Aid': '急救',
+    Blacksmithing: '鍛造',
+    Leatherworking: '製皮',
+    Alchemy: '鍊金術',
+    Herbalism: '草藥學',
+    Cooking: '烹飪',
+    Mining: '採礦',
+    Tailoring: '裁縫',
+    Engineering: '工程學',
+    Enchanting: '附魔',
+    Fishing: '釣魚',
+    Skinning: '剝皮',
+    Jewelcrafting: '珠寶設計',
+    Inscription: '銘文學',
+    Archaeology: '考古學',
   });
 
   const EXACT_TW_CI = Object.freeze(
@@ -965,7 +1193,7 @@
         if (!img) {
           continue;
         }
-        if (img.height && img.height < 16) {
+        if (img.height && img.height < 12) {
           continue;
         }
         mainLinks.push(link);
@@ -974,7 +1202,7 @@
       if (mainLinks.length === 0) {
         continue;
       }
-      if (mainLinks.length > 2) {
+      if (mainLinks.length > 6) {
         return null;
       }
 
@@ -1027,6 +1255,21 @@
       return false;
     }
 
+    let scope = nameElement.parentElement;
+    for (let depth = 0; depth < 4 && scope; depth += 1) {
+      const existingAnchors = scope.querySelectorAll('a[data-wh-rename-link="true"]');
+      for (const existing of existingAnchors) {
+        if (
+          existing !== iconLink
+          && !nameElement.contains(existing)
+          && existing.getAttribute('href') === href
+        ) {
+          return false;
+        }
+      }
+      scope = scope.parentElement;
+    }
+
     const anchor = document.createElement('a');
     anchor.setAttribute('href', href);
     anchor.setAttribute('rel', 'noopener');
@@ -1047,7 +1290,12 @@
     return true;
   }
 
-  const DUNGEON_NAME_ONLY_PANEL_HEADINGS = new Set(['Dungeon Summary', '副本總覽']);
+  const DUNGEON_NAME_ONLY_PANEL_HEADINGS = new Set([
+    'Dungeon Summary',
+    '副本總覽',
+    'Boss Summary',
+    '首領總覽',
+  ]);
 
   function isInsideDungeonNameOnlyPanel(element) {
     let current = element;
