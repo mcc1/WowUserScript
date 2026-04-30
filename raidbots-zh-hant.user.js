@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      0.3.3
+// @version      0.3.8
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
@@ -120,6 +120,21 @@
     slayer: '殺戮者',
   });
 
+  const DUNGEON_TW_MAP = Object.freeze({
+    pit_of_saron: '薩倫之淵',
+    skyreach: '擎天峰',
+    seat_of_the_triumvirate: '三傑議會之座',
+    algethar_academy: '阿爾蓋薩學院',
+    windrunner_spire: '風行者塔',
+    maisara_caverns: '梅薩拉洞穴',
+    nexus_point_xenas: '奧核點瑟納斯',
+    magisters_terrace: '博學者殿堂',
+    den_of_nalorakk: '納羅拉克之穴',
+    the_blinding_vale: '盲目谷地',
+    murder_row: '兇殺路',
+    voidscar_arena: '虛無之痕競技場',
+  });
+
   const RACE_TW_MAP = Object.freeze({
     human: '人類',
     dwarf: '矮人',
@@ -188,6 +203,12 @@
     'Prefer Equipped if Sidegrade': '同等結果時優先已裝備',
     'Changes from your equipped gear are highlighted': '與目前裝備的差異已高亮顯示',
     'Top Gear (DPS)': '最佳配裝 (DPS)',
+    'Dungeon Summary': '副本總覽',
+    Sort: '排序',
+    Priority: '優先順序',
+    'Expected Value': '期望值',
+    Best: '最佳',
+    'Show All Variations': '顯示所有變體',
     'Go to equipped': '跳到目前裝備',
     'Relative DPS': '相對 DPS',
     'Show Gear Differences From': '顯示裝備差異基準',
@@ -459,6 +480,11 @@
     return HERO_TALENT_TW_MAP[key] || SPEC_TW_MAP[key] || CLASS_TW_MAP[key] || RACE_TW_MAP[key] || null;
   }
 
+  function translateDungeon(value) {
+    const key = normalizeKey(value);
+    return DUNGEON_TW_MAP[key] || null;
+  }
+
   function translateTermSequence(value) {
     const words = String(value || '')
       .trim()
@@ -544,6 +570,19 @@
     const titleMatch = trimmed.match(/^Top Gear - (.+?) - ([\d,]+\s+DPS) - Raidbots$/);
     if (titleMatch) {
       return replaceTrimmed(text, trimmed, `最佳配裝 - ${titleMatch[1]} - ${titleMatch[2]} - Raidbots`);
+    }
+
+    const dungeonOnly = translateDungeon(trimmed);
+    if (dungeonOnly) {
+      return replaceTrimmed(text, trimmed, dungeonOnly);
+    }
+
+    const dungeonWithSuffix = trimmed.match(/^(.+?)\s+-\s+(.+)$/);
+    if (dungeonWithSuffix) {
+      const dungeonTw = translateDungeon(dungeonWithSuffix[1]);
+      if (dungeonTw) {
+        return replaceTrimmed(text, trimmed, `${dungeonTw} - ${dungeonWithSuffix[2]}`);
+      }
     }
 
     const direct = translateName(trimmed);
@@ -872,7 +911,11 @@
       return false;
     }
 
-    if (EXACT_TW[value]) {
+    if (EXACT_TW[value] || EXACT_TW_CI[value.toLowerCase()]) {
+      return false;
+    }
+
+    if (translateDungeon(value)) {
       return false;
     }
 
@@ -905,24 +948,40 @@
     const textCenter = getRectCenter(textRect);
 
     let ancestor = textElement;
-    for (let depth = 0; depth < 6 && ancestor; depth += 1) {
+    for (let depth = 0; depth < 3 && ancestor; depth += 1) {
       ancestor = ancestor.parentElement;
       if (!(ancestor instanceof Element)) {
         continue;
       }
 
       const links = ancestor.querySelectorAll(WOWHEAD_ITEM_OR_SPELL_LINK);
-      let bestLink = null;
-      let bestScore = Number.POSITIVE_INFINITY;
 
+      const mainLinks = [];
       for (const link of links) {
         if (!(link instanceof HTMLAnchorElement)) {
           continue;
         }
-        if (link.querySelector('img') === null) {
+        const img = link.querySelector('img');
+        if (!img) {
           continue;
         }
+        if (img.height && img.height < 16) {
+          continue;
+        }
+        mainLinks.push(link);
+      }
 
+      if (mainLinks.length === 0) {
+        continue;
+      }
+      if (mainLinks.length > 2) {
+        return null;
+      }
+
+      let bestLink = null;
+      let bestScore = Number.POSITIVE_INFINITY;
+
+      for (const link of mainLinks) {
         const rect = link.getBoundingClientRect();
         if (rect.width === 0 && rect.height === 0) {
           continue;
@@ -931,11 +990,11 @@
         const center = getRectCenter(rect);
         const dx = Math.abs(center.x - textCenter.x);
         const dy = Math.abs(center.y - textCenter.y);
-        if (dy > 42 || dx > 420) {
+        if (dy > 18 || dx > 240) {
           continue;
         }
 
-        const score = dy * 8 + dx;
+        const score = dy * 16 + dx;
         if (score < bestScore) {
           bestScore = score;
           bestLink = link;
@@ -988,6 +1047,25 @@
     return true;
   }
 
+  const DUNGEON_NAME_ONLY_PANEL_HEADINGS = new Set(['Dungeon Summary', '副本總覽']);
+
+  function isInsideDungeonNameOnlyPanel(element) {
+    let current = element;
+    while (current && current !== document.body) {
+      if (current instanceof Element && current.classList.contains('Panel')) {
+        const heading = current.querySelector('.PanelHeader .Heading, .PanelHeader h1, .PanelHeader h2, .PanelHeader h3, .PanelHeader h4, .PanelHeader h5, .PanelHeader h6');
+        if (heading) {
+          const headingText = (heading.textContent || '').trim();
+          if (DUNGEON_NAME_ONLY_PANEL_HEADINGS.has(headingText)) {
+            return true;
+          }
+        }
+      }
+      current = current.parentElement;
+    }
+    return false;
+  }
+
   function linkifyNearbyItemNames(root = document) {
     const scope = root instanceof Document ? root.body : root;
     if (!(scope instanceof Element)) {
@@ -1012,6 +1090,12 @@
         continue;
       }
       if (candidate.closest('a,button,label,textarea,select,[role="button"]')) {
+        continue;
+      }
+      if (candidate.closest('h1,h2,h3,h4,h5,h6,thead,th,caption,[role="heading"],[role="columnheader"]')) {
+        continue;
+      }
+      if (isInsideDungeonNameOnlyPanel(candidate)) {
         continue;
       }
       if (candidate.classList.contains('Tooltip_box')) {
