@@ -210,7 +210,8 @@
   }
 
   function isTwModeEnabled() {
-    return window.localStorage.getItem(TW_MODE_STORAGE_KEY) === TW_MODE_VALUE;
+    const val = window.localStorage.getItem(TW_MODE_STORAGE_KEY);
+    return val === null || val === TW_MODE_VALUE || val === 'true';
   }
 
   function setTwModeEnabled(enabled) {
@@ -218,7 +219,7 @@
       window.localStorage.setItem(TW_MODE_STORAGE_KEY, TW_MODE_VALUE);
       return;
     }
-    window.localStorage.removeItem(TW_MODE_STORAGE_KEY);
+    window.localStorage.setItem(TW_MODE_STORAGE_KEY, 'false');
   }
 
   function injectZhHantOption() {
@@ -388,7 +389,7 @@
 
     refreshTimer = window.setTimeout(() => {
       refreshTimer = null;
-      const wowheadPower = window.$WowheadPower;
+      const wowheadPower = window.$WowheadPower || (window.WH && window.WH.Tooltips);
       if (wowheadPower && typeof wowheadPower.refreshLinks === 'function') {
         refreshRetryCount = 0;
         wowheadPower.refreshLinks();
@@ -423,6 +424,7 @@
       const hasImage = link.querySelector('img') !== null;
       if (hasText && !hasImage && link.dataset.whRenameLink !== 'true') {
         link.dataset.whRenameLink = 'true';
+        link.setAttribute('data-wh-rename-link', 'true');
         touched = true;
       }
     }
@@ -469,6 +471,7 @@
           const linkNode = originalGetLink.call(this, key);
           if (linkNode && linkNode.nodeType === Node.ELEMENT_NODE && linkNode.tagName === 'A') {
             linkNode.dataset.whRenameLink = 'true';
+            linkNode.setAttribute('data-wh-rename-link', 'true');
           }
           return linkNode;
         };
