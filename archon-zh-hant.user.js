@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Archon.gg Traditional Chinese
 // @namespace    https://www.archon.gg/
-// @version      0.2.0
+// @version      0.3.0
 // @description  Translate archon.gg WoW build pages to Traditional Chinese.
 // @author       mcc
 // @match        https://www.archon.gg/wow/*
@@ -20,6 +20,7 @@
   }
   window.whTooltips.colorLinks = true;
   window.whTooltips.iconSize = false;   // 不讓 Wowhead 在連結旁插入額外圖示，避免跑版
+  window.whTooltips.domain = 'tw';      // 改版後語系改用路徑前綴，仍用 domain 指定 widget 資料語系
   // renameLinks 不設為 true（全局會破壞天賦節點圖示）
   // 只用逐個連結的 data-wh-rename-link="true" 控制哪些連結要 rename
 
@@ -442,8 +443,8 @@
   }
 
   // ── Wowhead 繁體中文連結修正 ──────────────────────────────────────────────
-  // Archon 的天賦節點和裝備連結指向 cn.wowhead.com（簡體）或 www.wowhead.com（英文）。
-  // 改為 tw.wowhead.com 並設 data-wh-rename-link="true" 後，
+  // Archon 的天賦節點和裝備連結指向簡體或英文的 Wowhead。
+  // 改成繁中語系網址並設 data-wh-rename-link="true" 後，
   // Wowhead widget ($WowheadPower.refreshLinks) 會自動換成繁體中文名稱和 tooltip。
 
   let wowheadRefreshTimer = null;
@@ -465,28 +466,96 @@
     }, 80);
   }
 
-  const WOWHEAD_SUBDOMAINS = /https?:\/\/(www|cn|[a-z]{2})\.wowhead\.com\//;
+  // Wowhead 改版後語系從子網域（tw.wowhead.com）改成路徑前綴（www.wowhead.com/tw/），
+  // 舊的子網域改寫已經無法讓 widget 判斷語系，所以統一正規化成新格式。
+  const WOWHEAD_HOST = /(?:^|\.)wowhead\.com$/i;
+  const WOWHEAD_LOCALE_SEGMENTS = new Set([
+    'www', 'en', 'de', 'es', 'fr', 'it', 'pt', 'ru', 'ko', 'cn', 'tw',
+  ]);
+  // 遊戲版本前綴要保留，語系段必須插在它後面（例：/classic/tw/item=123）
+  const WOWHEAD_GAME_VERSIONS = new Set([
+    'classic', 'era', 'tbc', 'wotlk', 'cata', 'mop', 'wod', 'ptr', 'ptr-2', 'beta',
+  ]);
+  const TW_LOCALE = 'tw';
+
+  function toTwWowheadUrl(hrefLike) {
+    let url;
+    try {
+      url = new URL(hrefLike, window.location.href);
+    } catch (_) {
+      return null;
+    }
+    if (!WOWHEAD_HOST.test(url.hostname)) return null;
+
+    url.protocol = 'https:';
+    url.hostname = 'www.wowhead.com';
+
+    const segments = url.pathname.split('/').filter(Boolean);
+    let localeIndex = 0;
+    if (segments.length > 0 && WOWHEAD_GAME_VERSIONS.has(segments[0].toLowerCase())) {
+      localeIndex = 1;
+    }
+    // 移掉既有語系段（可能是 cn / de / www…），再插入 tw；已經是 tw 時結果不變
+    if (segments.length > localeIndex && WOWHEAD_LOCALE_SEGMENTS.has(segments[localeIndex].toLowerCase())) {
+      segments.splice(localeIndex, 1);
+    }
+    segments.splice(localeIndex, 0, TW_LOCALE);
+
+    url.pathname = '/' + segments.join('/');
+    return url.toString();
+  }
+
+  // data-wowhead 會蓋掉 href 的解析結果，所以只在它已存在時補上 domain=tw，
+  // 不自行建立（避免漏掉 href 上的 bonus / ilvl 等參數而顯示錯誤的 tooltip）。
+  function applyTwDomainToDataWowhead(link) {
+    const raw = link.getAttribute('data-wowhead');
+    if (!raw) return false;
+
+    const parts = raw.split('&').filter(Boolean);
+    let changed = false;
+    let found = false;
+    for (let i = 0; i < parts.length; i += 1) {
+      if (/^domain=/i.test(parts[i])) {
+        found = true;
+        if (parts[i] !== 'domain=' + TW_LOCALE) {
+          parts[i] = 'domain=' + TW_LOCALE;
+          changed = true;
+        }
+      }
+    }
+    if (!found) {
+      parts.push('domain=' + TW_LOCALE);
+      changed = true;
+    }
+    if (changed) link.setAttribute('data-wowhead', parts.join('&'));
+    return changed;
+  }
+
+  const WOWHEAD_ITEM_PATH = /\/item(?:=|\/)/;
+  const WOWHEAD_SPELL_PATH = /\/spell(?:=|\/)/;
 
   function patchWowheadLinks(root = document) {
     const links = root.querySelectorAll('a[href*="wowhead.com"]');
     let touched = false;
     for (const link of links) {
       const href = link.href || '';
-      if (!WOWHEAD_SUBDOMAINS.test(href)) continue;
-      if (!href.includes('/item') && !href.includes('/spell')) continue;
+      if (!WOWHEAD_ITEM_PATH.test(href) && !WOWHEAD_SPELL_PATH.test(href)) continue;
 
-      // 換成 tw 子網域
-      const newHref = href.replace(WOWHEAD_SUBDOMAINS, 'https://tw.wowhead.com/');
+      const newHref = toTwWowheadUrl(href);
+      if (!newHref) continue;
       if (newHref !== href) {
         link.href = newHref;
         touched = true;
       }
 
+      if (applyTwDomainToDataWowhead(link)) {
+        touched = true;
+      }
+
       // 只對 item= 連結加 rename（裝備、寶石、附魔）。
-      // spell= 連結是天賦節點，只換子網域讓 tooltip 正確，不 rename 避免破壞節點排版。
-      const isItemLink = newHref.includes('/item=') || newHref.includes('/item/');
+      // spell= 連結是天賦節點，只換語系讓 tooltip 正確，不 rename 避免破壞節點排版。
       const hasText = link.textContent.trim().length > 0;
-      if (isItemLink && hasText && link.dataset.whRenameLink !== 'true') {
+      if (WOWHEAD_ITEM_PATH.test(newHref) && hasText && link.dataset.whRenameLink !== 'true') {
         link.dataset.whRenameLink = 'true';
         touched = true;
       }

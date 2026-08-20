@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Bloodmallet Traditional Chinese Wowhead
 // @namespace    https://bloodmallet.com/
-// @version      0.3.4
-// @description  Add zh-hant mode, switch item links/names to tw.wowhead.com, and translate class/spec labels.
+// @version      0.4.0
+// @description  Add zh-hant mode, switch item links/names to the zh-hant Wowhead locale, and translate class/spec labels.
 // @author       mcc
 // @match        https://bloodmallet.com/*
 // @match        http://bloodmallet.com/*
-// @run-at       document-idle
+// @run-at       document-start
 // @grant        none
 // @license      MIT
 // ==/UserScript==
@@ -255,23 +255,79 @@
     );
   }
 
-  function makeTwWowheadUrl(urlLike) {
+  // Wowhead 改版後語系從子網域（tw.wowhead.com）改成路徑前綴（www.wowhead.com/tw/），
+  // 舊的子網域改寫已經無法讓 widget 判斷語系，所以統一正規化成新格式。
+  const WOWHEAD_HOST = /(?:^|\.)wowhead\.com$/i;
+  const WOWHEAD_LOCALE_SEGMENTS = new Set([
+    'www', 'en', 'de', 'es', 'fr', 'it', 'pt', 'ru', 'ko', 'cn', 'tw',
+  ]);
+  // 遊戲版本前綴要保留，語系段必須插在它後面（例：/classic/tw/item=123）
+  const WOWHEAD_GAME_VERSIONS = new Set([
+    'classic', 'era', 'tbc', 'wotlk', 'cata', 'mop', 'wod', 'ptr', 'ptr-2', 'beta',
+  ]);
+  const TW_LOCALE = 'tw';
+
+  function toTwWowheadUrl(hrefLike) {
+    let url;
     try {
-      const url = new URL(urlLike, window.location.href);
-      if (!url.hostname.endsWith('.wowhead.com')) {
-        return null;
-      }
-      if (url.hostname === 'tw.wowhead.com') {
-        return null;
-      }
-      if (!url.pathname.includes('item=')) {
-        return null;
-      }
-      url.hostname = 'tw.wowhead.com';
-      return url.toString();
+      url = new URL(hrefLike, window.location.href);
     } catch (_) {
       return null;
     }
+    if (!WOWHEAD_HOST.test(url.hostname)) {
+      return null;
+    }
+
+    url.protocol = 'https:';
+    url.hostname = 'www.wowhead.com';
+
+    const segments = url.pathname.split('/').filter(Boolean);
+    let localeIndex = 0;
+    if (segments.length > 0 && WOWHEAD_GAME_VERSIONS.has(segments[0].toLowerCase())) {
+      localeIndex = 1;
+    }
+    // 移掉既有語系段（可能是 cn / de / www…），再插入 tw；已經是 tw 時結果不變
+    if (segments.length > localeIndex && WOWHEAD_LOCALE_SEGMENTS.has(segments[localeIndex].toLowerCase())) {
+      segments.splice(localeIndex, 1);
+    }
+    segments.splice(localeIndex, 0, TW_LOCALE);
+
+    url.pathname = '/' + segments.join('/');
+    return url.toString();
+  }
+
+  // data-wowhead 會蓋掉 href 的解析結果，所以只在它已存在時補上 domain=tw，
+  // 不自行建立（避免漏掉 href 上的 bonus / ilvl 等參數而顯示錯誤的 tooltip）。
+  function applyTwDomainToDataWowhead(link) {
+    const raw = link.getAttribute('data-wowhead');
+    if (!raw) {
+      return false;
+    }
+
+    const parts = raw.split('&').filter(Boolean);
+    let changed = false;
+    let found = false;
+    for (let i = 0; i < parts.length; i += 1) {
+      if (/^domain=/i.test(parts[i])) {
+        found = true;
+        if (parts[i] !== 'domain=' + TW_LOCALE) {
+          parts[i] = 'domain=' + TW_LOCALE;
+          changed = true;
+        }
+      }
+    }
+    if (!found) {
+      parts.push('domain=' + TW_LOCALE);
+      changed = true;
+    }
+    if (changed) {
+      link.setAttribute('data-wowhead', parts.join('&'));
+    }
+    return changed;
+  }
+
+  function isWowheadItemUrl(href) {
+    return /\/item(?:=|\/)/.test(href);
   }
 
   const SLOT_LABELS_TW = Object.freeze({
@@ -346,13 +402,21 @@
   }
 
   function patchExistingLinks(root = document) {
-    const links = root.querySelectorAll('a[href*="wowhead.com/item="]');
+    const links = root.querySelectorAll('a[href*="wowhead.com"]');
     let touched = false;
 
     for (const link of links) {
-      const twUrl = makeTwWowheadUrl(link.href);
+      if (!isWowheadItemUrl(link.href || '')) {
+        continue;
+      }
+
+      const twUrl = toTwWowheadUrl(link.href);
       if (twUrl && link.href !== twUrl) {
         link.href = twUrl;
+        touched = true;
+      }
+
+      if (applyTwDomainToDataWowhead(link)) {
         touched = true;
       }
 
@@ -397,7 +461,7 @@
           if (typeof originalUrl !== 'string') {
             return originalUrl;
           }
-          return originalUrl.replace('https://cn.wowhead.com/', 'https://tw.wowhead.com/');
+          return toTwWowheadUrl(originalUrl) || originalUrl;
         };
       }
 
@@ -432,8 +496,8 @@
               continue;
             }
             if (
-              node.matches('a[href*="wowhead.com/item="], .bloodmallet_chart, a[id^="navbar_"][id$="_selector"]') ||
-              node.querySelector('a[href*="wowhead.com/item="], .bloodmallet_chart, a[id^="navbar_"][id$="_selector"]')
+              node.matches('a[href*="wowhead.com"], .bloodmallet_chart, a[id^="navbar_"][id$="_selector"]') ||
+              node.querySelector('a[href*="wowhead.com"], .bloodmallet_chart, a[id^="navbar_"][id$="_selector"]')
             ) {
               shouldPatch = true;
               break;
@@ -540,15 +604,36 @@
     translateIndexClassSpecLinks(document);
   }
 
-  if (isSettingsPage) {
-    injectZhHantOption();
+  // ── Wowhead widget 語言設定 ──
+  // 必須在 power.js 載入前跑（所以腳本改成 document-start，且不能等 DOMContentLoaded），
+  // 但只在使用者有開啟繁中模式時才覆蓋，否則維持 bloodmallet 原本的語言。
+  if (isTwModeEnabled()) {
+    if (typeof window.whTooltips === 'undefined') {
+      window.whTooltips = {};
+    }
+    // 改版後語系改用路徑前綴，widget 的資料語系用 domain 指定
+    window.whTooltips.domain = 'tw';
   }
 
-  if (isChartPage && isTwModeEnabled()) {
-    enableTwModeOnChartPages();
+  function start() {
+    if (isSettingsPage) {
+      injectZhHantOption();
+    }
+
+    if (isChartPage && isTwModeEnabled()) {
+      enableTwModeOnChartPages();
+    }
+
+    if (isIndexPage && isTwModeEnabled()) {
+      enableTwModeOnIndexPage();
+    }
   }
 
-  if (isIndexPage && isTwModeEnabled()) {
-    enableTwModeOnIndexPage();
+  // 腳本改到 document-start 才能在 power.js 之前設定 whTooltips，
+  // 但下面的邏輯都需要 DOM，所以等 DOMContentLoaded 再啟動。
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  } else {
+    start();
   }
 })();

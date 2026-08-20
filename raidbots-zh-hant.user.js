@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      0.4.6
+// @version      0.5.0
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
@@ -160,6 +160,8 @@
   window.whTooltips.iconizeLinks = false;
   window.whTooltips.renameLinks = false;
   window.whTooltips.locale = 'zhtw';
+  // 改版後語系改用路徑前綴，widget 的資料語系用 domain 指定
+  window.whTooltips.domain = 'tw';
 
   const CLASS_TW_MAP = Object.freeze({
     death_knight: '死亡騎士',
@@ -677,8 +679,19 @@
     year: '年',
   });
 
-  const WOWHEAD_SUBDOMAINS = /^(?:https?:)?\/\/(www|cn|[a-z]{2})\.wowhead\.com\//i;
-  const WOWHEAD_ITEM_OR_SPELL_LINK = 'a[href*="wowhead.com/item="],a[href*="wowhead.com/spell="]';
+  // Wowhead 改版後語系從子網域（tw.wowhead.com）改成路徑前綴（www.wowhead.com/tw/），
+  // 舊的子網域改寫已經無法讓 widget 判斷語系，所以統一正規化成新格式。
+  const WOWHEAD_HOST = /(?:^|\.)wowhead\.com$/i;
+  const WOWHEAD_LOCALE_SEGMENTS = new Set([
+    'www', 'en', 'de', 'es', 'fr', 'it', 'pt', 'ru', 'ko', 'cn', 'tw',
+  ]);
+  // 遊戲版本前綴要保留，語系段必須插在它後面（例：/classic/tw/item=123）
+  const WOWHEAD_GAME_VERSIONS = new Set([
+    'classic', 'era', 'tbc', 'wotlk', 'cata', 'mop', 'wod', 'ptr', 'ptr-2', 'beta',
+  ]);
+  const TW_LOCALE = 'tw';
+  // 選擇器不能綁死語系段，/item= 和 /tw/item= 都要選得到
+  const WOWHEAD_ITEM_OR_SPELL_LINK = 'a[href*="wowhead.com"][href*="item="],a[href*="wowhead.com"][href*="spell="]';
   const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'CODE', 'PRE', 'SVG']);
   const SKIP_CLASS_KEYWORDS = ['ace_', 'CodeMirror', 'monaco-editor'];
   const ATTRIBUTE_SELECTOR = '[aria-label],[title],[placeholder],input[type="button"][value],input[type="submit"][value],input[type="reset"][value]';
@@ -1071,6 +1084,65 @@
     }, 80);
   }
 
+  function toTwWowheadUrl(hrefLike) {
+    let url;
+    try {
+      url = new URL(hrefLike, window.location.href);
+    } catch (_) {
+      return null;
+    }
+    if (!WOWHEAD_HOST.test(url.hostname)) {
+      return null;
+    }
+
+    url.protocol = 'https:';
+    url.hostname = 'www.wowhead.com';
+
+    const segments = url.pathname.split('/').filter(Boolean);
+    let localeIndex = 0;
+    if (segments.length > 0 && WOWHEAD_GAME_VERSIONS.has(segments[0].toLowerCase())) {
+      localeIndex = 1;
+    }
+    // 移掉既有語系段（可能是 cn / de / www…），再插入 tw；已經是 tw 時結果不變
+    if (segments.length > localeIndex && WOWHEAD_LOCALE_SEGMENTS.has(segments[localeIndex].toLowerCase())) {
+      segments.splice(localeIndex, 1);
+    }
+    segments.splice(localeIndex, 0, TW_LOCALE);
+
+    url.pathname = '/' + segments.join('/');
+    return url.toString();
+  }
+
+  // data-wowhead 會蓋掉 href 的解析結果，所以只在它已存在時補上 domain=tw，
+  // 不自行建立（避免漏掉 href 上的 bonus / ilvl 等參數而顯示錯誤的 tooltip）。
+  function applyTwDomainToDataWowhead(link) {
+    const raw = link.getAttribute('data-wowhead');
+    if (!raw) {
+      return false;
+    }
+
+    const parts = raw.split('&').filter(Boolean);
+    let changed = false;
+    let found = false;
+    for (let i = 0; i < parts.length; i += 1) {
+      if (/^domain=/i.test(parts[i])) {
+        found = true;
+        if (parts[i] !== 'domain=' + TW_LOCALE) {
+          parts[i] = 'domain=' + TW_LOCALE;
+          changed = true;
+        }
+      }
+    }
+    if (!found) {
+      parts.push('domain=' + TW_LOCALE);
+      changed = true;
+    }
+    if (changed) {
+      link.setAttribute('data-wowhead', parts.join('&'));
+    }
+    return changed;
+  }
+
   function patchWowheadLinks(root = document) {
     const links = [];
 
@@ -1087,16 +1159,20 @@
     let touched = false;
     for (const link of links) {
       const href = link.getAttribute('href') || '';
-      if (!WOWHEAD_SUBDOMAINS.test(href)) {
-        continue;
-      }
       if (!/(?:\/item(?:=|\/)|\/spell(?:=|\/))/.test(href)) {
         continue;
       }
 
-      const newHref = href.replace(WOWHEAD_SUBDOMAINS, 'https://tw.wowhead.com/');
+      const newHref = toTwWowheadUrl(href);
+      if (!newHref) {
+        continue;
+      }
       if (newHref !== href) {
         link.setAttribute('href', newHref);
+        touched = true;
+      }
+
+      if (applyTwDomainToDataWowhead(link)) {
         touched = true;
       }
 
@@ -1250,6 +1326,10 @@
       return false;
     }
 
+    // 圖示連結可能還沒被 patchWowheadLinks 正規化，這裡先轉成新版繁中網址，
+    // 下面的去重比對和新建的連結都用同一份，避免新舊格式各建一條。
+    const twHref = toTwWowheadUrl(href) || href;
+
     const originalText = (nameElement.textContent || '').trim();
     if (!isLikelyItemOrEnchantName(originalText)) {
       return false;
@@ -1262,7 +1342,7 @@
         if (
           existing !== iconLink
           && !nameElement.contains(existing)
-          && existing.getAttribute('href') === href
+          && existing.getAttribute('href') === twHref
         ) {
           return false;
         }
@@ -1271,7 +1351,7 @@
     }
 
     const anchor = document.createElement('a');
-    anchor.setAttribute('href', href);
+    anchor.setAttribute('href', twHref);
     anchor.setAttribute('rel', 'noopener');
     anchor.setAttribute('target', '_blank');
     anchor.dataset.whRenameLink = 'true';
@@ -1282,6 +1362,7 @@
     const dataWowhead = iconLink.getAttribute('data-wowhead');
     if (dataWowhead) {
       anchor.setAttribute('data-wowhead', dataWowhead);
+      applyTwDomainToDataWowhead(anchor);
     }
 
     nameElement.textContent = '';
