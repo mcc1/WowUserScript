@@ -255,15 +255,11 @@
     );
   }
 
-  // Wowhead 改版後語系從子網域（tw.wowhead.com）改成路徑前綴（www.wowhead.com/tw/），
-  // 舊的子網域改寫已經無法讓 widget 判斷語系，所以統一正規化成新格式。
+  // Wowhead 官方 widget (power.js) 正則解析需要乾淨的 subdomain 格式（如 tw.wowhead.com）
+  // 若使用路徑前綴（www.wowhead.com/tw/）會導致 widget 正則截取 subdomain 產生多餘的點號（tw..wowhead.com）而報錯。
   const WOWHEAD_HOST = /(?:^|\.)wowhead\.com$/i;
   const WOWHEAD_LOCALE_SEGMENTS = new Set([
     'www', 'en', 'de', 'es', 'fr', 'it', 'pt', 'ru', 'ko', 'cn', 'tw',
-  ]);
-  // 遊戲版本前綴要保留，語系段必須插在它後面（例：/classic/tw/item=123）
-  const WOWHEAD_GAME_VERSIONS = new Set([
-    'classic', 'era', 'tbc', 'wotlk', 'cata', 'mop', 'wod', 'ptr', 'ptr-2', 'beta',
   ]);
   const TW_LOCALE = 'tw';
 
@@ -279,18 +275,20 @@
     }
 
     url.protocol = 'https:';
-    url.hostname = 'www.wowhead.com';
 
+    const hostParts = url.hostname.toLowerCase().split('.');
+    const sub = hostParts.length > 2 ? hostParts[0] : '';
+    if (['classic', 'tbc', 'wotlk', 'cata', 'mop', 'ptr', 'ptr-2', 'beta'].includes(sub)) {
+      url.hostname = `${sub}.wowhead.com`;
+    } else {
+      url.hostname = 'tw.wowhead.com';
+    }
+
+    // 清除路徑中殘留的語系前綴（例如 /tw/item=... 轉回 /item=...）
     const segments = url.pathname.split('/').filter(Boolean);
-    let localeIndex = 0;
-    if (segments.length > 0 && WOWHEAD_GAME_VERSIONS.has(segments[0].toLowerCase())) {
-      localeIndex = 1;
+    if (segments.length > 0 && WOWHEAD_LOCALE_SEGMENTS.has(segments[0].toLowerCase())) {
+      segments.shift();
     }
-    // 移掉既有語系段（可能是 cn / de / www…），再插入 tw；已經是 tw 時結果不變
-    if (segments.length > localeIndex && WOWHEAD_LOCALE_SEGMENTS.has(segments[localeIndex].toLowerCase())) {
-      segments.splice(localeIndex, 1);
-    }
-    segments.splice(localeIndex, 0, TW_LOCALE);
 
     url.pathname = '/' + segments.join('/');
     return url.toString();
@@ -604,14 +602,18 @@
     translateIndexClassSpecLinks(document);
   }
 
-  // ── Wowhead widget 語言設定 ──
+  // ── Wowhead widget 全域語系設定 ──
   // 必須在 power.js 載入前跑（所以腳本改成 document-start，且不能等 DOMContentLoaded），
   // 但只在使用者有開啟繁中模式時才覆蓋，否則維持 bloodmallet 原本的語言。
   if (isTwModeEnabled()) {
+    window.Locale = {
+      getId: function () { return 10; },
+      getName: function () { return 'zhtw'; },
+    };
+
     if (typeof window.whTooltips === 'undefined') {
       window.whTooltips = {};
     }
-    // 改版後語系改用路徑前綴，widget 的資料語系用 domain 指定
     window.whTooltips.domain = 'tw';
   }
 
