@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         Wowhead Dual-Language Title & Cross-Language Search
 // @namespace    https://www.wowhead.com/
-// @version      1.3.1
+// @version      1.4.0
 // @description  在 Wowhead 顯示雙語標題，並支援中英文跨語言即時搜尋與結果整合
 // @author       mcc
 // @match        https://*.wowhead.com/*
 // @match        http://*.wowhead.com/*
+// @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/wowhead-dual-language-title.user.js
+// @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/wowhead-dual-language-title.user.js
 // @run-at       document-start
 // @grant        none
 // @license      MIT
