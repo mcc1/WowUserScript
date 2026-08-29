@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.1.0
+// @version      1.1.1
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
@@ -1103,7 +1103,7 @@
   const TW_LOCALE = 'tw';
   // 選擇器
   const WOWHEAD_ITEM_OR_SPELL_LINK = 'a[href*="wowhead.com"][href*="item="],a[href*="wowhead.com"][href*="spell="],a[href*="wowhead.com"][href*="/item/"],a[href*="wowhead.com"][href*="/spell/"]';
-  const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'CODE', 'PRE', 'SVG']);
+  const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'CODE', 'PRE']);
   const SKIP_CLASS_KEYWORDS = ['ace_', 'CodeMirror', 'monaco-editor'];
   const ATTRIBUTE_SELECTOR = '[aria-label],[title],[placeholder],input[type="button"][value],input[type="submit"][value],input[type="reset"][value]';
   const ATTRIBUTE_NAMES = ['aria-label', 'title', 'placeholder'];
@@ -1496,8 +1496,6 @@
       const translated = translateText(original);
       if (translated && translated !== original) {
         updates.push({ node, translated });
-      } else {
-        translatedNodeText.set(node, original);
       }
       node = walker.nextNode();
     }
@@ -1594,6 +1592,64 @@
     whHelper.registerNonItemNames(Object.keys(EXACT_TW));
     whHelper.registerDungeonMap(DUNGEON_TW_MAP);
     whHelper.start();
+  } else {
+    // 獨立 Fallback 監聽器，防止 @require 載入失敗或快取未就緒時翻譯失效
+    const fallbackScan = (root) => {
+      if (!root) return;
+      translateAttributesInTree(root);
+      walkTextNodes(root);
+      translateDocumentTitle();
+    };
+    const startFallback = () => {
+      fallbackScan(document.body);
+      setTimeout(() => fallbackScan(document.body), 300);
+      setTimeout(() => fallbackScan(document.body), 1000);
+      setTimeout(() => fallbackScan(document.body), 2500);
+
+      const observer = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+          if (m.type === 'childList') {
+            for (const n of m.addedNodes) {
+              if (n.nodeType === Node.ELEMENT_NODE || n.nodeType === Node.TEXT_NODE) {
+                fallbackScan(n.nodeType === Node.ELEMENT_NODE ? n : n.parentElement);
+              }
+            }
+          } else if (m.type === 'characterData') {
+            fallbackScan(m.target.parentElement || m.target);
+          } else if (m.type === 'attributes') {
+            if (m.target instanceof Element) {
+              fallbackScan(m.target);
+            }
+          }
+        }
+      });
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: ['aria-label', 'title', 'placeholder', 'value'],
+      });
+    };
+
+    if (!document.body) {
+      document.addEventListener('DOMContentLoaded', startFallback, { once: true });
+    } else {
+      startFallback();
+    }
+
+    const rawPush = history.pushState.bind(history);
+    history.pushState = function (...args) {
+      const res = rawPush(...args);
+      translatedNodeText = new WeakMap();
+      setTimeout(() => fallbackScan(document.body), 200);
+      return res;
+    };
+    window.addEventListener('popstate', () => {
+      translatedNodeText = new WeakMap();
+      setTimeout(() => fallbackScan(document.body), 200);
+    });
   }
 })();
+
 
