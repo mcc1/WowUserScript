@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bloodmallet Traditional Chinese Wowhead
 // @namespace    https://bloodmallet.com/
-// @version      0.8.0
+// @version      0.9.0
 // @description  Add zh-hant mode, switch item links/names to the zh-hant Wowhead locale, and translate class/spec labels.
 // @author       mcc
 // @match        https://bloodmallet.com/*
@@ -63,6 +63,53 @@
     dungeonslice: '地城切片',
   });
 
+  // 圖表類型是站台自己的分類標籤，頁面上沒有可用的遊戲 ID，屬於 AGENTS.md 說的
+  // 「只有這類才手寫」。譯名仍取暴雪官方 zh-TW，查證記錄：
+  //   Phial 藥瓶（item=191359）、Potion 藥水（item=191387）、附魔（spell=7411）
+  // 「副屬性分配」與「天賦目標數量縮放」暴雪沒有對應字串 —— 前者用台服社群通行
+  // 的說法，後者是 bloodmallet 自創術語。
+  const CHART_TYPE_TW_MAP = Object.freeze({
+    trinkets: '飾品',
+    phials: '藥瓶',
+    potions: '藥水',
+    races: '種族',
+    weapon_enchantments: '武器附魔',
+    secondary_distributions: '副屬性分配',
+    talent_target_scaling: '天賦目標數量縮放',
+  });
+
+  // 站台 UI 控件。Dungeon / Raid 這裡指飾品「來源」，與同名的戰鬥風格語境不同，
+  // 所以另開一張表而不是共用 FIGHT_STYLE_TW_MAP。
+  // On Use / Passive：官方 tooltip 只寫「使用：」「裝備：」，沒有名詞化的分類詞。
+  const UI_TW_MAP = Object.freeze({
+    'Advanced Options': '進階選項',
+    'Custom fight style': '自訂戰鬥風格',
+    'Custom APL': '自訂 APL',
+    'Use absolute values': '顯示絕對數值',
+    'Raw chart data': '原始圖表資料',
+    'Accept GA tracking': '接受 GA 追蹤',
+    'Reject GA tracking': '拒絕 GA 追蹤',
+    'Dungeon': '地城',
+    'Raid': '團隊副本',
+    'High PvP': 'PvP 高階',
+    'Profession': '專業',
+    'On Use': '使用類',
+    'Passive': '被動類',
+  });
+
+  // 複合字串沒辦法完全比對，例如手風琴標題是「Character profile (Source:
+  // simulationcraft)」。改用子字串置換，長的排前面避免被短的先吃掉。
+  const UI_PARTIAL_TW = Object.freeze({
+    'SimulationCraft settings': 'SimulationCraft 設定',
+    '(Source: simulationcraft)': '（來源：simulationcraft）',
+    'Character profile': '角色配置',
+  });
+
+  const CHART_AXIS_TW_MAP = Object.freeze({
+    '% damage per second': '每秒傷害百分比',
+    'damage per second': '每秒傷害',
+  });
+
   const SLOT_LABELS_TW = Object.freeze({
     'Head': '頭部',
     'Hands': '手部',
@@ -116,11 +163,14 @@
     return lookupGameUnit(value);
   }
 
-  function getPathClassAndSpec() {
+  /** /chart/<class>/<spec>/<type>/<fight style> */
+  function getChartPathParts() {
     const parts = location.pathname.split('/').filter(Boolean);
     return {
       wowClass: parts[1] || '',
       wowSpec: parts[2] || '',
+      chartType: parts[3] || '',
+      fightStyle: parts[4] || '',
     };
   }
 
@@ -132,7 +182,7 @@
   }
 
   function translateClassAndSpecLabels() {
-    const { wowClass, wowSpec } = getPathClassAndSpec();
+    const { wowClass, wowSpec, chartType, fightStyle } = getChartPathParts();
     const classTw = lookupGameUnit(wowClass);
     const specTw = lookupGameUnit(wowSpec);
 
@@ -145,13 +195,68 @@
       setElementTextById('c_spec', specTw);
     }
 
+    // 目前選中的圖表類型與戰鬥風格改從網址推，比抓 DOM 文字穩 —— 站方改了
+    // 顯示字串也不會失效，因為 URL 片段就是查詢鍵本身。
+    setElementTextById('navbar_simulation_type_selection', CHART_TYPE_TW_MAP[chartType]);
+    setElementTextById('navbar_fight_style_selection', FIGHT_STYLE_TW_MAP[fightStyle]);
+
+    // 選單項目的 id 形如 navbar_<key>_selector，<key> 直接就是查詢鍵。
+    // 三段 fallback：遊戲資料（職業／專精）→ 圖表類型 → 戰鬥風格。
+    // 戰鬥風格的譯名早就在 FIGHT_STYLE_TW_MAP 裡，只是從來沒接到導覽列上。
     const selectorLinks = document.querySelectorAll('a[id^="navbar_"][id$="_selector"]');
     for (const link of selectorLinks) {
       const id = link.id || '';
       const key = id.slice(KEY_PREFIX.length, id.length - KEY_SUFFIX.length);
-      const translated = translateClassOrSpec(key);
+      const translated = translateClassOrSpec(key)
+        || CHART_TYPE_TW_MAP[key]
+        || FIGHT_STYLE_TW_MAP[key];
       if (translated && link.textContent !== translated) {
         link.textContent = translated;
+      }
+    }
+  }
+
+  /**
+   * 站台 UI 控件的翻譯。一律走文字節點，不整個換掉 textContent —— 手風琴標題
+   * 「Character profile (Source: simulationcraft)」的來源那段包在子 span 裡，
+   * 換掉整顆 textContent 會把那個 span 一起吃掉。
+   */
+  function translateUiControls(root) {
+    const scope = root && root.querySelectorAll ? root : document;
+
+    for (const el of scope.querySelectorAll('button, label, .btn')) {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      let node;
+
+      while ((node = walker.nextNode())) {
+        const raw = node.textContent;
+        const trimmed = raw.trim();
+        if (!trimmed) continue;
+
+        let next = UI_TW_MAP[trimmed];
+        if (!next) {
+          next = trimmed;
+          for (const [en, tw] of Object.entries(UI_PARTIAL_TW)) {
+            if (next.includes(en)) next = next.split(en).join(tw);
+          }
+        }
+
+        // 用 raw.replace 保留原本的前後空白，維持排版
+        if (next !== trimmed) node.textContent = raw.replace(trimmed, next);
+      }
+    }
+  }
+
+  /** 圖表座標軸標題。文字與 .bm-bar-min / .bm-bar-max 混在同一個容器，只換文字節點。 */
+  function translateChartAxis(root) {
+    const scope = root && root.querySelectorAll ? root : document;
+    for (const title of scope.querySelectorAll('.bm-axis .bm-bar-title')) {
+      for (const node of title.childNodes) {
+        if (node.nodeType !== Node.TEXT_NODE) continue;
+        const translated = CHART_AXIS_TW_MAP[node.textContent.trim()];
+        if (translated && node.textContent !== translated) {
+          node.textContent = translated;
+        }
       }
     }
   }
@@ -444,6 +549,8 @@
       onScan: (root) => {
         translateClassAndSpecLabels();
         translateCharacterProfile();
+        translateUiControls(root);
+        translateChartAxis(root);
         if (isIndexPage) {
           translateIndexClassSpecLinks(root);
         }

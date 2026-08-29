@@ -149,6 +149,16 @@ grep -n '@version\|?v=' libs/wowhead-tw-helper.js *.user.js
   - Myth **裝備軌道** = 神話（與難度不同，勿一起改）。
   - Epic **品質** = 史詩。
   - Mythic+ = 傳奇鑰石；Raid Finder = 團隊搜尋器。
+  - Power Infusion = **注入能量**（`spell=10060`）。不是「能量灌注」—— 官方是
+    動詞在前，兩個字順序相反，憑印象填一定錯。
+  - Phial = **藥瓶**（`item=191359` tooltip）；Potion = **藥水**（`item=191387`
+    分類）；Enchanting = **附魔**（`spell=7411`）；專業分類作「專業法術」。
+- 暴雪沒有對應字串的少數情況（bloodmallet 的圖表類型就有兩個）：
+  - Secondary stats 沒有官方統稱，用台服社群通行的**副屬性**。
+  - Talent Target Scaling 是站台自創術語，照語意譯。
+  - On Use / Passive 官方 tooltip 只寫「使用：」「裝備：」，沒有名詞化分類詞，
+    自行定為**使用類** / **被動類**。
+  這類要在字典旁邊註明「非官方」，免得後人以為查得到出處。
 - 不確定就用 ID 去查，不要憑印象填。
 
 ## 手動驗證（沒有自動測試框架）
