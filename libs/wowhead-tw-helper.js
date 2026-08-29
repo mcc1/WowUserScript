@@ -327,6 +327,24 @@
      * @returns {HTMLAnchorElement|null}
      */
     findNearestWowheadIconLink(textElement) {
+      // 0. 超優先：檢查文字節點直接同層或直接父容器內緊鄰的專屬圖示（例如附魔卷軸、特定法術/通貨圖示）
+      const immediateParent = textElement.parentElement;
+      if (immediateParent instanceof Element) {
+        const directImg = immediateParent.querySelector('img[src*="/id/item/"], img[src*="/id/spell/"], img[src*="/id/currency/"]');
+        if (directImg) {
+          const m = (directImg.getAttribute('src') || '').match(/\/id\/(item|spell|currency)\/(\d+)\.png/);
+          if (m) {
+            const fakeLink = document.createElement('a');
+            fakeLink.setAttribute('href', `//tw.wowhead.com/${m[1]}=${m[2]}`);
+            return fakeLink;
+          }
+        }
+        const directLink = immediateParent.querySelector(WOWHEAD_ITEM_OR_SPELL_LINK);
+        if (directLink instanceof HTMLAnchorElement && !directLink.contains(textElement) && !textElement.contains(directLink)) {
+          return directLink;
+        }
+      }
+
       // 1. 優先透過 closest 判定是否位於明確的單一裝備卡片/行中（支援帶插槽寶石與 noLink: true 的裝備）
       const itemCard =
         typeof textElement.closest === 'function'
