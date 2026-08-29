@@ -326,13 +326,8 @@
      * @returns {HTMLAnchorElement|null}
      */
     findNearestWowheadIconLink(textElement) {
-      const textRect = textElement.getBoundingClientRect();
-      if (textRect.width === 0 && textRect.height === 0) return null;
-
-      const textCenter = getRectCenter(textRect);
-
       let ancestor = textElement;
-      for (let depth = 0; depth < 3 && ancestor; depth += 1) {
+      for (let depth = 0; depth < 5 && ancestor; depth += 1) {
         ancestor = ancestor.parentElement;
         if (!(ancestor instanceof Element)) continue;
 
@@ -346,20 +341,15 @@
           mainLinks.push(link);
         }
 
-        // 嚴格規則：只有在恰好只有 1 個裝備圖示時才判定為該物品的名稱文字
-        // 若一行有多個裝備圖示（如掉落清單），左側文字為地城/首領名稱，不可關聯！
-        if (mainLinks.length !== 1) return null;
+        // 如果這個祖先節點內還沒有包含圖示，繼續往上層祖先搜尋
+        if (mainLinks.length === 0) continue;
 
-        const link = mainLinks[0];
-        const rect = link.getBoundingClientRect();
-        if (rect.width === 0 && rect.height === 0) continue;
+        // 如果這個祖先節點內包含多於 1 個裝備圖示（如好運符/地城總覽清單行），
+        // 該列文字為地城/首領名稱，絕對不可關聯！直接返回 null
+        if (mainLinks.length > 1) return null;
 
-        const center = getRectCenter(rect);
-        const dx = Math.abs(center.x - textCenter.x);
-        const dy = Math.abs(center.y - textCenter.y);
-        if (dy > 18 || dx > 240) continue;
-
-        return link;
+        // 恰好只有 1 個裝備圖示，成功找到唯一對應的物品圖示
+        return mainLinks[0];
       }
       return null;
     }

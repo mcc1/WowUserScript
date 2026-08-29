@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.2.0
+// @version      1.3.0
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
 // @match        https://raidbots.com/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.2.0
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.3.0
 // @run-at       document-start
 // @grant        none
 // @license      MIT
@@ -701,9 +701,20 @@
     Boss: '首領',
     'Main Hand Weapon': '主手武器',
     'Off Hand Weapon': '副手武器',
+    FINGER: '手指',
+    Finger: '手指',
     Trinket: '飾品',
     'Trinket 1': '飾品 1',
     'Trinket 2': '飾品 2',
+    'Include All Items': '包含所有物品',
+    'Exclude All Items': '排除所有物品',
+    'Click any row or item to toggle inclusion in the sim': '點擊任何列或物品以切換是否納入模擬',
+    'All items have been excluded. Please enable some to run Droptimizer': '所有物品均已被排除。請啟用部分物品以執行掉落最佳化',
+    'Include Off-Spec Items': '包含非本專精物品',
+    'Include Catalyst Items': '包含催化劑物品',
+    'Add Vault Socket': '加入寶庫插槽',
+    'Preferred Gem:': '偏好寶石：',
+    'Preferred Gem': '偏好寶石',
     'Notes / Limitations': '注意事項 / 限制',
     'Run Droptimizer': '執行掉落最佳化',
     'Load from Armory': '從戰網檔案匯入',
