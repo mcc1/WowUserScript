@@ -6,6 +6,8 @@
 // @author       mcc
 // @match        https://www.archon.gg/wow/*
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.5.3
+// @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/archon-zh-hant.user.js
+// @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/archon-zh-hant.user.js
 // @run-at       document-start
 // @grant        none
 // @license      MIT

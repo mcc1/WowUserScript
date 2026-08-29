@@ -7,6 +7,8 @@
 // @match        https://bloodmallet.com/*
 // @match        http://bloodmallet.com/*
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.5.3
+// @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/bloodmallet-zh-hant-wowhead.user.js
+// @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/bloodmallet-zh-hant-wowhead.user.js
 // @run-at       document-start
 // @grant        none
 // @license      MIT
