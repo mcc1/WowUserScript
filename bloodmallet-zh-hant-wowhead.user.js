@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bloodmallet Traditional Chinese Wowhead
 // @namespace    https://bloodmallet.com/
-// @version      0.7.0
+// @version      0.7.1
 // @description  Add zh-hant mode, switch item links/names to the zh-hant Wowhead locale, and translate class/spec labels.
 // @author       mcc
 // @match        https://bloodmallet.com/*
@@ -24,9 +24,6 @@
   const ZH_HANT_VALUE = 'zh-hant';
   const KEY_PREFIX = 'navbar_';
   const KEY_SUFFIX = '_selector';
-
-
-
 
   // 職業／專精／種族的譯名不手寫，一律取自 libs/game-names-tw.js
   // （暴雪 client DB2 的官方 zhTW）。該檔尚未產生時安全降級為查不到。
@@ -54,11 +51,13 @@
     });
   }
 
+  // 戰鬥風格是模擬器概念，不是遊戲實體。Patchwerk 雖然源自 Naxxramas 的首領
+  // 「縫補者」，但在模擬器語境下指的是站樁不動的木樁戰，與 raidbots 用語一致。
   const FIGHT_STYLE_TW_MAP = Object.freeze({
-    patchwerk: '帕奇維克',
-    castingpatchwerk: '施法帕奇維克',
-    castingpatchwerk5: '施法帕奇維克 (5目標)',
-    castingpatchwerk3: '施法帕奇維克 (3目標)',
+    patchwerk: '木樁戰',
+    castingpatchwerk: '施法木樁戰',
+    castingpatchwerk5: '施法木樁戰 (5目標)',
+    castingpatchwerk3: '施法木樁戰 (3目標)',
     hecticaddcleave: '混亂順劈',
     dungeon: '地城',
     dungeonslice: '地城切片',

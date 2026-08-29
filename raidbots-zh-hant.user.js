@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.6.3
+// @version      1.6.5
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
@@ -171,23 +171,14 @@
   window.whTooltips.locale = 'zhtw';
   window.whTooltips.domain = 'tw';
 
-
-
-
   // 副本／團本／首領的譯名不寫在這裡 —— 由 libs/game-names-tw.js 提供，
-  // 該檔由 tools/generate-game-names.mjs 依暴雪官方 Journal API（zh_TW）產生。
+  // 該檔由 tools/generate-game-names.mjs 依 wago.tools 的 client DB2（zhTW）產生。
   //
-  // 以下只保留暴雪 Journal 沒有對應條目的 raidbots 自訂標籤（例如把 Mechagon
-  // 拆成工坊／廢料場、DOTI 與 Tazavesh 的分段）。新增副本請重跑產生器，不要加在這裡。
+  // 以下只保留 DB2 沒有對應條目的 raidbots 自訂標籤（例如把 Mechagon 拆成
+  // 工坊／廢料場、DOTI 與 Tazavesh 的分段）。新增副本請重跑產生器，不要加在這裡。
   const DUNGEON_TW_MAP = Object.freeze({
     // World of Warcraft: Midnight (12.0 / 12.1) - Raids (午夜團隊副本)
     march_on_queldanas: '進軍奎爾達納斯',
-
-    // World of Warcraft: Midnight (12.1 Season 2) - Dungeons (午夜第 2 季地城)
-
-    // World of Warcraft: Midnight (12.0 Season 1) - Dungeons (午夜第 1 季地城)
-
-    // The War Within - Raids (地心之戰團隊副本)
 
     // The War Within - Season 2 Dungeons (第 2 季地城)
     the_floodgate: '水閘行動',
@@ -196,12 +187,8 @@
     mechagon_workshop: '機械岡行動 - 工坊',
     mechagon_junkyard: '機械岡行動 - 廢料場',
 
-    // The War Within - Season 1 Dungeons (第 1 季地城)
-
     // The War Within - Delves (探究)
     mycomancers_cavern: '菌術師洞穴',
-
-    // Midnight - Delves & Dungeons (午夜探究與地城)
 
     // Classic / Previous Expansions Dungeons & Raids
     uldaman_legacy_of_tyr: '奧達曼：提爾的遺產',
@@ -212,7 +199,6 @@
     tazavesh_streets_of_wonder: '塔札維許：奇蹟街道',
     tazavesh_soleahs_gambit: '塔札維許：索利亞的計謀',
   });
-
 
   const EXACT_TW = Object.freeze({
     'Top Gear': '最佳配裝',
@@ -267,6 +253,8 @@
     'Raw Input': '原始輸入',
     'Original Addon Input': '原始插件輸入',
     'Simulation Details': '模擬細節',
+
+    // libs/game-names-tw.js 的官方表處理 —— 那會譯成首領名而失去原意。
     Patchwerk: '木樁戰',
     Weekly: '每週',
     '5 minutes': '5 分鐘',
@@ -461,6 +449,7 @@
     Region: '地區',
     Realm: '伺服器',
     Character: '角色',
+
     // Droptimizer Sources & Seasons
     'BONUS ROLL SUMMARY': '好運符總覽',
     'Bonus Roll Summary': '好運符總覽',
@@ -488,9 +477,6 @@
     '1 variation hidden': '1 個變體已隱藏',
     'Midnight Raids': '午夜團隊副本',
     'Midnight Dungeons': '午夜地城',
-    'The Tidebound Grotto': '浪縛石窟',
-    'Tidebound Grotto': '浪縛石窟',
-    'Nymrissa Wavecaller': '『召浪者』奈姆莉莎',
     'Nymrissa': '奈姆莉莎',
     'High Shaman Talan': '高階薩滿塔蘭',
     'Tidebound Colossus': '浪縛巨像',
@@ -544,178 +530,33 @@
     'PVP Season 2 (Honor)': '第 2 季 PVP（榮譽）',
     'PVP Season 3 (Honor)': '第 3 季 PVP（榮譽）',
 
-    // Midnight - Raids (午夜團隊副本)
-    'March on Quel\'Danas': '進軍奎爾達納斯',
-
     // The Venomous Abyss Bosses (劇毒深淵首領 - 台服官方繁中)
-    'Nek\'zali the Soulcoiler': '『纏魂者』尼札利',
-    'Nekzali the Soulcoiler': '『纏魂者』尼札利',
     'Nek\'zali': '尼札利',
-    'The Twin Fangs': '雙生毒牙',
-    'Twin Fangs': '雙生毒牙',
     'Vexhul and Ithraz': '薇克修爾與伊斯拉茲',
     'Vexhul': '薇克修爾',
     'Ithraz': '伊斯拉茲',
-    'Entombed Sentinels': '埋葬衛哨',
-    'Vashnik the Malignant': '『惡性之毒』伐許尼克',
     'Vashnik': '伐許尼克',
-    'The Lost Explorers': '迷路的探險者',
-    'Lost Explorers': '迷路的探險者',
-    'Sszorak': '司佐拉',
-    'The Coiled Altar': '盤蛇祭壇',
-    'Coiled Altar': '盤蛇祭壇',
-    'Ula\'tek': '烏拉特克',
-    'Ulatek': '烏拉特克',
 
     // Midnight Season 2 Dungeons & Bosses (午夜第 2 季地城與首領 - 台服官方繁中)
-    'Rav\'i': '拉維',
     'High Evolutionist': '高階進化者',
-    'Zul\'jan': '祖爾贊',
-
-    'Nalorakk': '納羅拉克',
-
-    'The Golden Serpent': '黃金巨蛇',
-    'Mchimba the Embalmer': '防腐者姆沁巴',
-    'The Council of Tribes': '部族議會',
-    'Dazar, The First King': '始祖之王達薩',
-
-    'Adderis and Aspix': '艾德里斯與阿斯皮克斯',
-    'Merektha': '梅雷克莎',
-    'Galvazzt': '加瓦茲特',
-    'Avatar of Sethraliss': '瑟沙利斯的化身',
-
-    'Melidrussa Chillworn': '莫莉杜莎·霜亡',
-    'Kokia Blazehoof': '柯奇亞·熾足',
-    'Kyrakka and Erkhart Stormvein': '凱拉卡與埃克哈特·風脈',
-
-    // Midnight Season 1 Dungeons (午夜第 1 季地城 - 台服官方繁中)
-
-    // The War Within - Raids (地心之戰團隊副本)
-    'The Liberation of Undermine': '解放幽坑城',
 
     // Liberation of Undermine Bosses (解放幽坑城首領)
-    'Vexie and the Geargrinders': '薇克希和齒輪幫',
     'Vexie & the Geargrinders': '薇克希和齒輪幫',
-    'Cauldron of Carnage': '兇殘大鍋',
-    'Rik Reverb': '里克‧李福伯',
-    'Stix Bunkjunker': '史提克‧邦江克',
-    'Sprocketmonger Lockenstock': '鏈販‧鎖貨',
-    'The One-Armed Bandit': '獨臂強盜',
-    'One-Armed Bandit': '獨臂強盜',
-    'Mug\'Zee, Heads of Security': '瑪格吉',
-    'Mug\'Zee': '瑪格吉',
-    'Chrome King Gallywix': '閃亮亮大王加里維克斯',
     'Gallywix': '加里維克斯',
-
-    // Nerub-ar Palace Bosses (奈幽巴宮殿首領)
-    'Ulgrax the Devourer': '吞噬者烏格拉克斯',
-    'The Bloodbound Horror': '血縛恐懼',
-    'Bloodbound Horror': '血縛恐懼',
-    'Sikran, Captain of the Sureki': '蘇雷吉隊長希克朗',
-    'Sikran': '希克朗',
-    'Rasha\'nan': '羅夏南',
-    'Broodtwister Ovi\'nax': '育巢者歐維納克斯',
-    'Nexus-Princess Ky\'veza': '奧核之姬綺維札',
-    'The Silken Court': '絲線議會',
-    'Silken Court': '絲線議會',
-    'Queen Ansurek': '安蘇芮克女王',
-
-    // World Bosses (世界首領)
-    'Orta, the Broken Mountain': '碎山歐爾塔',
-    'Kordac, the Dormant Protector': '沉睡的守護者寇達克',
-    'Aggregation of Horrors': '恐怖聚合體',
-    'Shurrai, Atrocity of the Undersea': '海底暴行舒瑞',
 
     // Season 2 Dungeons & Bosses (第 2 季地城與首領)
     'Big Dahlia': '大達莉亞',
-    'Demolition Duo': '爆破雙人組',
-    'Swampface': '沼澤臉',
-    'Geezle Gigazap': '吉澤爾·吉咖電',
-
-    'Brew Master Aldryr': '釀酒大師艾德里爾',
-    'I\'pa': '愛帕',
-    'Benk Buzzbee': '班克·嗡蜂',
-    'Goldie Baronbottom': '高蒂·男爵底',
-
-    'Ol\' Waxbeard': '老蠟鬍',
-    'Blazikon': '烈焰巨鳥',
-    'The Candle King': '蠟燭之王',
-    'Candle King': '蠟燭之王',
-    'The Darkness': '黑暗',
-
-    'The Priory of the Sacred Flame': '聖焰隱修院',
-    'Captain Dailcry': '戴克里隊長',
     'Baron Braunpyre': '布朗派爾男爵',
-    'Prioress Murrpray': '女修道院長穆爾普雷',
-
-    'Kyrioss': '基里奧斯',
     'Stormguard Gorrena': '風暴守衛戈雷納',
-    'Voidstone Monstrosity': '虛無之石巨怪',
-
-    'Coin-Operated Crowd Pummeler': '投幣式群眾重擊者',
-    'Azerokk': '艾澤洛克',
-    'Rixxa Fluxflame': '瑞克莎·流火',
-    'Mogul Razdunk': '商業大亨拉茲敦克',
-
-    'An Affront of Challengers': '挑戰者聚會',
-    'Gorechop': '高爾喬普',
-    'Xav the Unfallen': '不屈的薩夫',
-    'Kul\'tharok': '庫薩洛克',
-    'Mordretha, the Endless Empress': '無盡女皇莫德蕾薩',
-    'Mordretha': '莫德蕾薩',
-
     'Operation: Mechagon - Workshop': '機械岡行動 - 工坊',
     'Operation Mechagon - Workshop': '機械岡行動 - 工坊',
     'Operation: Mechagon - Junkyard': '機械岡行動 - 廢料場',
     'Operation Mechagon - Junkyard': '機械岡行動 - 廢料場',
     'Tussie Tonks': '狂歡坦克',
-    'K.U.-J.0.': '狂犬狗',
-    'Machinist\'s Garden': '機械師花園',
-    'King Mechagon': '麥卡貢國王',
-    'King Gobbamak': '高巴馬克國王',
-    'Gunker': '岡克',
-    'Trixie & Naeno': '翠克希與奈諾',
-    'HK-8 Aerial Oppression Unit': 'HK-8 空中壓制單位',
 
     // Season 1 Dungeons & Bosses (第 1 季地城與首領)
-    'Avanoxx': '阿瓦諾克斯',
-    'Anub\'zekt': '阿努布澤克特',
-    'Ki\'katal the Harvester': '收割者基卡塔爾',
-
-    'Orator Krix\'vizk': '演說者克里克斯維茲克',
-    'Fangs of the Queen': '女王之牙',
-    'The Coaglamation': '凝聚之物',
-    'Coaglamation': '凝聚之物',
-    'Izo, the Grand Splicer': '大接合師伊佐',
-
     'E.D.N.A.': '愛德娜',
-    'Skarmorak': '斯卡莫拉克',
-    'Master Machinists': '機械大師',
-    'Void Speaker Eirich': '虛無宣講者艾利希',
-
-    'Speaker Shadowcrown': '宣講者暗冠',
-    'Anub\'ikkaj': '阿努比卡吉',
     'Rasha\'nan (The Dawnbreaker)': '羅夏南',
-
-    'Ingra Maloch': '英格拉·馬羅克',
-    'Mistcaller': '喚霧者',
-    'Tred\'ova': '特雷多瓦',
-
-    'Blightbone': '凋骨',
-    'Amarth, The Harvester': '收割者阿瑪斯',
-    'Surgeon Stitchflesh': '縫肉外科醫生',
-    'Nalthor the Rimebinder': '縛霜者納爾索',
-
-    'Chopper Redhook': '「屠夫」紅鉤',
-    'Dread Captain Lockwood': '恐怖船長洛克伍德',
-    'Hadal Darkfathom': '哈達爾·黑淵',
-    'Viq\'Goth': '維克戈斯',
-
-    'General Umbriss': '昂布里斯將軍',
-    'Forgemaster Throngus': '鍛造大師索隆格斯',
-    'Drahga Shadowburner': '達加·燃影者',
-    'Erudax, the Duke of Below': '「地底公爵」埃魯達克斯',
-    'Erudax': '埃魯達克斯',
     'Include Off-Spec Items': '包含非主專精物品',
     'Catalyst': '催化',
     'Great Vault Item': '大秘寶庫物品',
@@ -880,7 +721,14 @@
   }
 
   function translateDungeon(value) {
-    // 優先採用暴雪官方 zh_TW（生成檔），其次才是站台自訂標籤
+    // EXACT_TW 若有明確條目，代表那是 raidbots 自己的 UI 用語，必須勝過官方遊戲
+    // 資料表。重複條目已清除，剩下的都是刻意覆寫（例如 Patchwerk 指模擬器的
+    // 木樁戰，交給官方表會變成 Naxxramas 的首領「縫補者」）。
+    const trimmed = String(value || '').trim();
+    if (trimmed && Object.prototype.hasOwnProperty.call(EXACT_TW, trimmed)) {
+      return EXACT_TW[trimmed];
+    }
+
     const official = lookupGameName(value);
     if (official) return official;
 
@@ -1110,6 +958,14 @@
       }
     }
 
+    // 必須排在下面的泛用破折號分支之前，否則會先被切成「左 - 右」而拆散。
+    const patchwerkHistory = trimmed.match(/^Patchwerk\s*-\s*Weekly\s*-\s*(.+)$/i);
+    if (patchwerkHistory) {
+      const rawRelative = patchwerkHistory[1].trim();
+      const relativeTw = translateRelativeTime(rawRelative) || rawRelative;
+      return replaceTrimmed(text, trimmed, `木樁戰 - 每週 - ${relativeTw}`);
+    }
+
     const sourceWithSuffix = trimmed.match(/^(.+?)\s+-\s+(.+)$/);
     if (sourceWithSuffix) {
       const left = sourceWithSuffix[1].trim();
@@ -1148,13 +1004,6 @@
       if (leftTw !== left || rightTw !== right) {
         return replaceTrimmed(text, trimmed, `- ${leftTw} - ${rightTw}`);
       }
-    }
-
-    const patchwerkHistory = trimmed.match(/^Patchwerk\s*-\s*Weekly\s*-\s*(.+)$/i);
-    if (patchwerkHistory) {
-      const rawRelative = patchwerkHistory[1].trim();
-      const relativeTw = translateRelativeTime(rawRelative) || rawRelative;
-      return replaceTrimmed(text, trimmed, `木樁戰 - 每週 - ${relativeTw}`);
     }
 
     const relativeOnly = translateRelativeTime(trimmed);
@@ -1449,5 +1298,3 @@
     });
   }
 })();
-
-
