@@ -1,6 +1,6 @@
 /**
  * Wowhead Traditional Chinese Helper Library (WowheadTwHelper)
- * @version 1.0.0
+ * @version 1.5.4
  * @description Shared library for UserScripts to localize Wowhead links, tooltips, and handle SPA dynamic updates safely.
  * @license MIT
  */
@@ -27,12 +27,10 @@
   function setupGlobalLocale() {
     if (typeof window === 'undefined') return;
 
-    if (!window.Locale) {
-      window.Locale = {
-        getId: function () { return 10; },
-        getName: function () { return 'zhtw'; },
-      };
-    }
+    window.Locale = {
+      getId: function () { return 10; },
+      getName: function () { return 'zhtw'; },
+    };
 
     if (typeof window.whTooltips === 'undefined') {
       window.whTooltips = {};

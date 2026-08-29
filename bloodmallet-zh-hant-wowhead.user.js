@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Bloodmallet Traditional Chinese Wowhead
 // @namespace    https://bloodmallet.com/
-// @version      0.5.0
+// @version      0.5.1
 // @description  Add zh-hant mode, switch item links/names to the zh-hant Wowhead locale, and translate class/spec labels.
 // @author       mcc
 // @match        https://bloodmallet.com/*
 // @match        http://bloodmallet.com/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.5.3
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.5.4
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/bloodmallet-zh-hant-wowhead.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/bloodmallet-zh-hant-wowhead.user.js
 // @run-at       document-start
@@ -360,6 +360,15 @@
           if (linkNode && linkNode.nodeType === Node.ELEMENT_NODE && linkNode.tagName === 'A') {
             linkNode.dataset.whRenameLink = 'true';
             linkNode.setAttribute('data-wh-rename-link', 'true');
+            if (helper) {
+              const href = linkNode.getAttribute('href');
+              if (href) {
+                const twHref = helper.toTwWowheadUrl(href);
+                if (twHref) linkNode.setAttribute('href', twHref);
+              }
+              helper.applyTwDomainToDataWowhead(linkNode);
+              helper.queueWowheadRefresh();
+            }
           }
           return linkNode;
         };
