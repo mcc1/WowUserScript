@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Archon.gg Traditional Chinese
 // @namespace    https://www.archon.gg/
-// @version      0.9.0
+// @version      0.9.1
 // @description  Translate archon.gg WoW build pages to Traditional Chinese.
 // @author       mcc
 // @match        https://www.archon.gg/wow/*
@@ -163,6 +163,10 @@
     'Vers': '臨機',
 
     // 附魔／寶石頁
+    // Omnium Folio 在頁面上只是區塊錨點 <a href="#omnium-folio">，沒有 Wowhead
+    // 連結可推 ID。譯名取自暴雪 zh-TW 官網新聞（news.blizzard.com/zh-tw），
+    // 是官方用語，不是社群翻譯。裡面的符文本身是普通 spell，有 ID，走 Wowhead。
+    'Omnium Folio': '萬象儀對開本',
     'Enchants': '附魔',
     'Gems': '寶石',
     'Gem': '寶石',
