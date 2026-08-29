@@ -6,7 +6,7 @@
 // @author       mcc
 // @match        https://www.raidbots.com/*
 // @match        https://raidbots.com/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.7.1
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.7.2
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=2
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/raidbots-zh-hant.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/raidbots-zh-hant.user.js

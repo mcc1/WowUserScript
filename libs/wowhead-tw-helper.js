@@ -1,6 +1,6 @@
 /**
  * Wowhead Traditional Chinese Helper Library (WowheadTwHelper)
- * @version 1.7.1
+ * @version 1.7.2
  * @description Shared library for UserScripts to localize Wowhead links, tooltips, and handle SPA dynamic updates safely.
  * @license MIT
  */
@@ -50,7 +50,7 @@
      * @param {boolean} [options.enableRenameLinks=true] - 自動為符合條件的連結加上 data-wh-rename-link="true"
      * @param {boolean} [options.enableSafeLinkify=false] - 是否開啟純文字裝備名稱自動超連結化
      * @param {boolean} [options.enableIconLinkRename=false] - 用探針翻譯「圖示與名稱同在一個連結內」的情況
-     * @param {boolean} [options.syncTextFlush=false] - 純文字變動同步翻譯，消除站方重繪造成的閃爍
+     * @param {boolean} [options.syncSmallMutations=false] - 小批變動同步翻譯，消除站方重繪造成的閃爍
      * @param {string[]} [options.excludedPanelKeywords] - 面板標題排除關鍵字（預設包含 summary, 總覽 等）
      * @param {Function} [options.onScan] - DOM 掃描回呼 (root) => void
      * @param {Function} [options.onUrlChange] - 網址變更回呼 (url) => void
@@ -62,7 +62,7 @@
           enableRenameLinks: true,
           enableSafeLinkify: false,
           enableIconLinkRename: false,
-          syncTextFlush: false,
+          syncSmallMutations: false,
           excludedPanelKeywords: ['summary', '總覽', 'bonus roll', '好運符', 'boss summary', 'dungeon summary'],
           onScan: null,
           onUrlChange: null,
@@ -77,6 +77,9 @@
       this.wowheadRefreshRetries = 0;
       this.maxWowheadRetries = 30;
       this.maxRenameProbeAttempts = 20;
+      // 一批變動帶進來多少節點以內算「小批」，可以同步處理。實測 archon 的 hover
+      // 重繪是 10 個文字節點；路由切換帶進來的是整個頁面，遠遠超過。
+      this.syncFlushMaxNodes = 50;
       this.pendingRoots = new Set();
       this.flushTimer = null;
       this.lastUrl = typeof location !== 'undefined' ? location.href : '';
@@ -716,21 +719,25 @@
         setTimeout(() => this.runFullPass(), 2200);
 
         this.observer = new MutationObserver((mutations) => {
-          // 站方在 hover 之類的重繪會把整條麵包屑寫回英文，我們再翻一次；
-          // 隔著 160ms 的 debounce，使用者會看到一次明顯的閃爍。這種「整批都只是
-          // 文字」的變動改成同步處理 —— MutationObserver 的 callback 在瀏覽器繪製
-          // 前就跑完，英文那一幀根本不會被畫出來。
+          // 站方在 hover 之類的重繪會把整條麵包屑換回英文，我們再翻一次；隔著
+          // 160ms 的 debounce，使用者會看到一次明顯的閃爍。小批變動改成同步處理
+          // —— MutationObserver 的 callback 在瀏覽器繪製前就跑完，英文那一幀根本
+          // 不會被畫出來。
           //
-          // 只有「沒有結構變動」的批次能這樣做。路由切換會一次插入一大片節點
-          // （childList），同步跑完整輪掃描會卡頓，那種還是走原本的 debounce。
-          // 屬性變動很便宜，不擋快車道。
-          let hasStructuralChange = false;
+          // 門檻看的是「這批帶進來多少 DOM」，不是變動的型別。archon 的 hover 重繪
+          // 是 childList 而不是改文字（實測 10 個文字節點），所以用型別分辨會完全
+          // 失效；路由切換帶進來的是整個頁面，用重量才分得開。
+          let addedWeight = 0;
 
           for (const mutation of mutations) {
             if (mutation.type === 'childList') {
-              hasStructuralChange = true;
               for (const added of mutation.addedNodes) {
-                if (added.nodeType === Node.ELEMENT_NODE || added.nodeType === Node.TEXT_NODE) {
+                if (added.nodeType === Node.ELEMENT_NODE) {
+                  addedWeight += 1 + (added.getElementsByTagName
+                    ? added.getElementsByTagName('*').length : 0);
+                  this.queueRoot(added);
+                } else if (added.nodeType === Node.TEXT_NODE) {
+                  addedWeight += 1;
                   this.queueRoot(added);
                 }
               }
@@ -747,7 +754,7 @@
             }
           }
 
-          if (!hasStructuralChange && this.options.syncTextFlush && this.pendingRoots.size) {
+          if (this.options.syncSmallMutations && addedWeight <= this.syncFlushMaxNodes && this.pendingRoots.size) {
             if (this.flushTimer !== null) {
               window.clearTimeout(this.flushTimer);
               this.flushTimer = null;
