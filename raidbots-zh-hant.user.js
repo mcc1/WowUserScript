@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.0.0
+// @version      1.1.0
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
@@ -713,12 +713,30 @@
     // Droptimizer Sources & Seasons
     'BONUS ROLL SUMMARY': '好運符總覽',
     'Bonus Roll Summary': '好運符總覽',
+    '好運符 SUMMARY': '好運符總覽',
+    '好運符 Summary': '好運符總覽',
     'BONUS ROLL': '好運符',
     'Bonus Roll': '好運符',
+    'Best Item': '最佳物品',
+    'SimC Export': 'SimC 匯出',
+    'Report Options': '報告選項',
+    'More Info': '更多資訊',
+    SUMMARY: '總覽',
+    Summary: '總覽',
+    'SimC Notifications': 'SimC 通知',
+    'The sim generated some warning/error messages. Check the "SimC Notifications" section for more details.':
+      '模擬產生了一些警告/錯誤訊息。請查看「SimC 通知」區塊以了解更多細節。',
+    'DPS compared to your current gear.': '與目前裝備相比的 DPS。',
+    'Highlighted icons indicate 0.05% or better DPS increase.':
+      '醒目標示的圖示代表 DPS 提升 0.05% 以上。',
     'Midnight Raids': '午夜團隊副本',
     'Midnight Dungeons': '午夜地城',
     'The Tidebound Grotto': '浪縛石窟',
     'Tidebound Grotto': '浪縛石窟',
+    'Nymrissa Wavecaller': '『召浪者』奈姆莉莎',
+    'Nymrissa': '奈姆莉莎',
+    'High Shaman Talan': '高階薩滿塔蘭',
+    'Tidebound Colossus': '浪縛巨像',
     'Season 1 Raids': '第 1 季團隊副本',
     'Season 2 Raids': '第 2 季團隊副本',
     'Season 3 Raids': '第 3 季團隊副本',
@@ -1179,6 +1197,55 @@
     return original.replace(trimmed, translated);
   }
 
+  const DIFFICULTY_TW = Object.freeze({
+    'heroic vault': '英雄寶庫',
+    'mythic vault': '傳奇寶庫',
+    'normal vault': '普通寶庫',
+    'lfr vault': '團隊搜尋器寶庫',
+    'raid finder vault': '團隊搜尋器寶庫',
+    heroic: '英雄',
+    mythic: '傳奇',
+    normal: '普通',
+    lfr: '團隊搜尋器',
+  });
+
+  function translateSuffix(suffix) {
+    const raw = String(suffix || '').trim();
+    const lower = raw.toLowerCase();
+    if (DIFFICULTY_TW[lower]) {
+      return DIFFICULTY_TW[lower];
+    }
+    const plusVault = raw.match(/^\+(\d+)\s+Vault$/i);
+    if (plusVault) {
+      return `+${plusVault[1]} 寶庫`;
+    }
+    const plusDungeon = raw.match(/^Mythic\s+(\d+)$/i);
+    if (plusDungeon) {
+      return `傳奇 ${plusDungeon[1]}`;
+    }
+    const variationsMatch = raw.match(/^(\d+)\s+variations?\s+hidden$/i);
+    if (variationsMatch) {
+      return `${variationsMatch[1]} 個變體已隱藏`;
+    }
+    return raw;
+  }
+
+  const MONTH_TW = Object.freeze({
+    jan: '1', feb: '2', mar: '3', apr: '4', may: '5', jun: '6',
+    jul: '7', aug: '8', sep: '9', oct: '10', nov: '11', dec: '12',
+  });
+
+  function translateDate(dateStr) {
+    const match = String(dateStr || '').trim().match(/^([A-Za-z]+)\s+(\d+)(?:st|nd|rd|th)?$/i);
+    if (match) {
+      const m = MONTH_TW[match[1].toLowerCase().slice(0, 3)];
+      if (m) {
+        return `${m} 月 ${match[2]} 日`;
+      }
+    }
+    return dateStr;
+  }
+
   function translateStatLabel(label) {
     const key = String(label || '').trim().toLowerCase();
     return STAT_LABEL_TW[key] || null;
@@ -1201,6 +1268,29 @@
       return replaceTrimmed(text, trimmed, exactCaseInsensitive);
     }
 
+    const hotfixMatch = trimmed.match(/^Raidbots is up-to-date with the latest (.+) hotfixes$/i);
+    if (hotfixMatch) {
+      const dateTw = translateDate(hotfixMatch[1]);
+      return replaceTrimmed(text, trimmed, `Raidbots 已更新至最新的 ${dateTw} 線上修正`);
+    }
+
+    const bossTargetMatch = trimmed.match(/^(\d+)\s+boss\s+targets?$/i);
+    if (bossTargetMatch) {
+      return replaceTrimmed(text, trimmed, `${bossTargetMatch[1]} 個首領目標`);
+    }
+
+    const variationHiddenMatch = trimmed.match(/^(\d+)\s+variations?\s+hidden$/i);
+    if (variationHiddenMatch) {
+      return replaceTrimmed(text, trimmed, `${variationHiddenMatch[1]} 個變體已隱藏`);
+    }
+
+    const summaryHeadingMatch = trimmed.match(/^(.+?)\s+(?:SUMMARY|Summary)$/);
+    if (summaryHeadingMatch) {
+      const prefix = summaryHeadingMatch[1].trim();
+      const prefixTw = EXACT_TW[prefix] || EXACT_TW_CI[prefix.toLowerCase()] || prefix;
+      return replaceTrimmed(text, trimmed, `${prefixTw} 總覽`);
+    }
+
     const titleMatch = trimmed.match(/^Top Gear - (.+?) - ([\d,]+\s+DPS) - Raidbots$/);
     if (titleMatch) {
       return replaceTrimmed(text, trimmed, `最佳配裝 - ${titleMatch[1]} - ${titleMatch[2]} - Raidbots`);
@@ -1211,11 +1301,28 @@
       return replaceTrimmed(text, trimmed, dungeonOnly);
     }
 
-    const dungeonWithSuffix = trimmed.match(/^(.+?)\s+-\s+(.+)$/);
-    if (dungeonWithSuffix) {
-      const dungeonTw = translateDungeon(dungeonWithSuffix[1]);
-      if (dungeonTw) {
-        return replaceTrimmed(text, trimmed, `${dungeonTw} - ${dungeonWithSuffix[2]}`);
+    const itemRowMatch = trimmed.match(/^(\d+)\s+(.+?)\s+(.+?)\s+-\s+(.+)$/);
+    if (itemRowMatch) {
+      const ilvl = itemRowMatch[1];
+      const slot = itemRowMatch[2];
+      const source = itemRowMatch[3];
+      const suffix = itemRowMatch[4];
+      const slotTw = translateTermSequence(slot) || translateName(slot) || slot;
+      const sourceTw = translateDungeon(source) || EXACT_TW[source] || EXACT_TW_CI[source.toLowerCase()] || source;
+      const suffixTw = translateSuffix(suffix);
+      if (slotTw !== slot || sourceTw !== source || suffixTw !== suffix) {
+        return replaceTrimmed(text, trimmed, `${ilvl} ${slotTw} ${sourceTw} - ${suffixTw}`);
+      }
+    }
+
+    const sourceWithSuffix = trimmed.match(/^(.+?)\s+-\s+(.+)$/);
+    if (sourceWithSuffix) {
+      const left = sourceWithSuffix[1].trim();
+      const right = sourceWithSuffix[2].trim();
+      const leftTw = translateDungeon(left) || EXACT_TW[left] || EXACT_TW_CI[left.toLowerCase()] || left;
+      const rightTw = translateSuffix(right);
+      if (leftTw !== left || rightTw !== right) {
+        return replaceTrimmed(text, trimmed, `${leftTw} - ${rightTw}`);
       }
     }
 
