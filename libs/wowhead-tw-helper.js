@@ -1,6 +1,6 @@
 /**
  * Wowhead Traditional Chinese Helper Library (WowheadTwHelper)
- * @version 1.6.0
+ * @version 1.6.1
  * @description Shared library for UserScripts to localize Wowhead links, tooltips, and handle SPA dynamic updates safely.
  * @license MIT
  */
@@ -302,6 +302,11 @@
       if (/[\u4e00-\u9fa5]/.test(value)) return false;
       if (!/[A-Za-z]/.test(value)) return false;
       if (/[<>{}\\]/.test(value)) return false;
+
+      // 全大寫短代碼是介面徽章（raidbots 疊在裝備圖示上的 CAT / UPG / GV / MOD…），
+      // 不是裝備名 —— 真正的裝備名一定含小寫字母。若不擋掉，徽章會被 linkify 成物品
+      // 連結，接著被 Wowhead widget 改寫成該物品的資料庫名稱，徽章就被整個換掉了。
+      if (value.length <= 5 && !/[a-z]/.test(value)) return false;
 
       return true;
     }

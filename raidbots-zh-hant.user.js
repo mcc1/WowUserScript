@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.6.2
+// @version      1.6.3
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
 // @match        https://raidbots.com/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.6.0
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.6.1
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=1
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/raidbots-zh-hant.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/raidbots-zh-hant.user.js
@@ -1385,6 +1385,8 @@
 
   if (whHelper) {
     whHelper.registerNonItemNames(Object.keys(EXACT_TW));
+    // 徽章短碼疊在裝備圖示上，絕不能被 linkify 成物品連結
+    whHelper.registerNonItemNames(Object.keys(ITEM_BADGE_TW));
     whHelper.registerDungeonMap(DUNGEON_TW_MAP);
     whHelper.registerGameNameLookup(lookupGameName);
     whHelper.start();
