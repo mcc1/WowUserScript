@@ -1,6 +1,6 @@
 /**
  * Wowhead Traditional Chinese Helper Library (WowheadTwHelper)
- * @version 1.5.4
+ * @version 1.5.5
  * @description Shared library for UserScripts to localize Wowhead links, tooltips, and handle SPA dynamic updates safely.
  * @license MIT
  */
@@ -541,6 +541,17 @@
       setTimeout(() => this.runFullPass(), 300);
       setTimeout(() => this.runFullPass(), 900);
       setTimeout(() => this.runFullPass(), 1800);
+    }
+
+    /**
+     * 相容別名
+     */
+    observe() {
+      this.start();
+    }
+
+    startHistoryListener() {
+      // History listener is automatically handled by start()
     }
 
     /**

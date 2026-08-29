@@ -6,7 +6,7 @@
 // @author       mcc
 // @match        https://bloodmallet.com/*
 // @match        http://bloodmallet.com/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.5.4
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.5.5
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/bloodmallet-zh-hant-wowhead.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/bloodmallet-zh-hant-wowhead.user.js
 // @run-at       document-start
@@ -508,9 +508,7 @@
     patchChartPrototypeWhenReady();
 
     if (helper) {
-      helper.observe(document.body);
-      helper.startHistoryListener();
-      helper.runFullPass();
+      helper.start();
     }
   }
 
@@ -531,9 +529,7 @@
     }, 100);
 
     if (helper) {
-      helper.observe(document.body);
-      helper.startHistoryListener();
-      helper.runFullPass();
+      helper.start();
     }
   }
 
