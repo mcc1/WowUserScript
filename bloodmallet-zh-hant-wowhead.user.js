@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         Bloodmallet Traditional Chinese Wowhead
 // @namespace    https://bloodmallet.com/
-// @version      0.4.0
+// @version      0.5.0
 // @description  Add zh-hant mode, switch item links/names to the zh-hant Wowhead locale, and translate class/spec labels.
 // @author       mcc
 // @match        https://bloodmallet.com/*
 // @match        http://bloodmallet.com/*
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.5.3
 // @run-at       document-start
 // @grant        none
 // @license      MIT
@@ -171,7 +172,6 @@
       return;
     }
 
-    // fallback path: spec button text from href /chart/{class}/{spec}/...
     const specButtons = table.querySelectorAll('a.spec-btn');
     for (const btn of specButtons) {
       const { wowSpec } = parseChartPathFromHref(btn.getAttribute('href') || '');
@@ -181,7 +181,6 @@
       }
     }
 
-    // fallback path: class headers
     const classHeaders = table.querySelectorAll('.wow-class-header-content');
     for (const header of classHeaders) {
       const wowClass = detectWowClassFromElement(header);
@@ -248,85 +247,11 @@
         setTwModeEnabled(useTraditional);
 
         if (useTraditional) {
-          // bloodmallet only supports zh-hans, so submit zh-hans and keep zh-hant in localStorage.
           select.value = ZH_HANS_VALUE;
         }
       },
       true
     );
-  }
-
-  // Wowhead 官方 widget (power.js) 正則解析需要乾淨的 subdomain 格式（如 tw.wowhead.com）
-  // 若使用路徑前綴（www.wowhead.com/tw/）會導致 widget 正則截取 subdomain 產生多餘的點號（tw..wowhead.com）而報錯。
-  const WOWHEAD_HOST = /(?:^|\.)wowhead\.com$/i;
-  const WOWHEAD_LOCALE_SEGMENTS = new Set([
-    'www', 'en', 'de', 'es', 'fr', 'it', 'pt', 'ru', 'ko', 'cn', 'tw',
-  ]);
-  const TW_LOCALE = 'tw';
-
-  function toTwWowheadUrl(hrefLike) {
-    let url;
-    try {
-      url = new URL(hrefLike, window.location.href);
-    } catch (_) {
-      return null;
-    }
-    if (!WOWHEAD_HOST.test(url.hostname)) {
-      return null;
-    }
-
-    url.protocol = 'https:';
-
-    const hostParts = url.hostname.toLowerCase().split('.');
-    const sub = hostParts.length > 2 ? hostParts[0] : '';
-    if (['classic', 'tbc', 'wotlk', 'cata', 'mop', 'ptr', 'ptr-2', 'beta'].includes(sub)) {
-      url.hostname = `${sub}.wowhead.com`;
-    } else {
-      url.hostname = 'tw.wowhead.com';
-    }
-
-    // 清除路徑中殘留的語系前綴（例如 /tw/item=... 轉回 /item=...）
-    const segments = url.pathname.split('/').filter(Boolean);
-    if (segments.length > 0 && WOWHEAD_LOCALE_SEGMENTS.has(segments[0].toLowerCase())) {
-      segments.shift();
-    }
-
-    url.pathname = '/' + segments.join('/');
-    return url.toString();
-  }
-
-  // data-wowhead 會蓋掉 href 的解析結果，所以只在它已存在時補上 domain=tw，
-  // 不自行建立（避免漏掉 href 上的 bonus / ilvl 等參數而顯示錯誤的 tooltip）。
-  function applyTwDomainToDataWowhead(link) {
-    const raw = link.getAttribute('data-wowhead');
-    if (!raw) {
-      return false;
-    }
-
-    const parts = raw.split('&').filter(Boolean);
-    let changed = false;
-    let found = false;
-    for (let i = 0; i < parts.length; i += 1) {
-      if (/^domain=/i.test(parts[i])) {
-        found = true;
-        if (parts[i] !== 'domain=' + TW_LOCALE) {
-          parts[i] = 'domain=' + TW_LOCALE;
-          changed = true;
-        }
-      }
-    }
-    if (!found) {
-      parts.push('domain=' + TW_LOCALE);
-      changed = true;
-    }
-    if (changed) {
-      link.setAttribute('data-wowhead', parts.join('&'));
-    }
-    return changed;
-  }
-
-  function isWowheadItemUrl(href) {
-    return /\/item(?:=|\/)/.test(href);
   }
 
   const SLOT_LABELS_TW = Object.freeze({
@@ -355,7 +280,6 @@
   ];
 
   function translateCharacterProfile() {
-    // Translate slot placeholder texts (only if no child elements = no item link yet)
     for (const id of CHARACTER_PROFILE_SLOT_IDS) {
       const el = document.getElementById(id);
       if (!el || el.children.length > 0) continue;
@@ -366,7 +290,6 @@
       }
     }
 
-    // Translate "Character profile" button text node
     const profileBtn = document.querySelector('#character-profile-label button');
     if (profileBtn) {
       for (const node of profileBtn.childNodes) {
@@ -378,60 +301,23 @@
     }
   }
 
-  let refreshTimer = null;
-  let refreshRetryCount = 0;
-  const MAX_REFRESH_RETRIES = 30;
-
-  function queueWowheadRefresh() {
-    if (refreshTimer !== null) {
-      return;
-    }
-
-    refreshTimer = window.setTimeout(() => {
-      refreshTimer = null;
-      const wowheadPower = window.$WowheadPower || (window.WH && window.WH.Tooltips);
-      if (wowheadPower && typeof wowheadPower.refreshLinks === 'function') {
-        refreshRetryCount = 0;
-        wowheadPower.refreshLinks();
-      } else if (refreshRetryCount < MAX_REFRESH_RETRIES) {
-        refreshRetryCount += 1;
-        queueWowheadRefresh();
+  // ── WowheadTwHelper 實例 ──────────────────────────────────────────────────
+  let helper = null;
+  if (isTwModeEnabled()) {
+    helper = new window.WowheadTwHelper({
+      enableRenameLinks: true,
+      enableSafeLinkify: false,
+      onScan: (root) => {
+        translateClassAndSpecLabels();
+        translateCharacterProfile();
+        if (isIndexPage) {
+          translateIndexClassSpecLinks(root);
+        }
+      },
+      onUrlChange: () => {
+        if (helper) helper.runFullPass();
       }
-    }, 80);
-  }
-
-  function patchExistingLinks(root = document) {
-    const links = root.querySelectorAll('a[href*="wowhead.com"]');
-    let touched = false;
-
-    for (const link of links) {
-      if (!isWowheadItemUrl(link.href || '')) {
-        continue;
-      }
-
-      const twUrl = toTwWowheadUrl(link.href);
-      if (twUrl && link.href !== twUrl) {
-        link.href = twUrl;
-        touched = true;
-      }
-
-      if (applyTwDomainToDataWowhead(link)) {
-        touched = true;
-      }
-
-      // 只對純文字連結（不含 img）加 rename，避免破壞 character profile 圖示排版
-      const hasText = link.textContent.trim().length > 0;
-      const hasImage = link.querySelector('img') !== null;
-      if (hasText && !hasImage && link.dataset.whRenameLink !== 'true') {
-        link.dataset.whRenameLink = 'true';
-        link.setAttribute('data-wh-rename-link', 'true');
-        touched = true;
-      }
-    }
-
-    if (touched) {
-      queueWowheadRefresh();
-    }
+    });
   }
 
   function patchChartPrototypeWhenReady() {
@@ -455,13 +341,13 @@
       }
 
       const originalGetUrl = Ctor.prototype._get_wowhead_url;
-      if (typeof originalGetUrl === 'function') {
+      if (typeof originalGetUrl === 'function' && helper) {
         Ctor.prototype._get_wowhead_url = function (key) {
           const originalUrl = originalGetUrl.call(this, key);
           if (typeof originalUrl !== 'string') {
             return originalUrl;
           }
-          return toTwWowheadUrl(originalUrl) || originalUrl;
+          return helper.toTwWowheadUrl(originalUrl) || originalUrl;
         };
       }
 
@@ -480,73 +366,25 @@
       Ctor.prototype.__twWowheadPatched = true;
       window.clearInterval(intervalId);
 
-      patchExistingLinks(document);
-      translateClassAndSpecLabels();
-      translateCharacterProfile();
+      if (helper) {
+        helper.runFullPass();
+      }
     }, 100);
-  }
-
-  function observeChartUpdates() {
-    const observer = new MutationObserver((mutations) => {
-      let shouldPatch = false;
-
-      for (const mutation of mutations) {
-        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-          for (const node of mutation.addedNodes) {
-            if (!(node instanceof Element)) {
-              continue;
-            }
-            if (
-              node.matches('a[href*="wowhead.com"], .bloodmallet_chart, a[id^="navbar_"][id$="_selector"]') ||
-              node.querySelector('a[href*="wowhead.com"], .bloodmallet_chart, a[id^="navbar_"][id$="_selector"]')
-            ) {
-              shouldPatch = true;
-              break;
-            }
-          }
-          if (shouldPatch) {
-            break;
-          }
-        }
-
-        if (
-          mutation.type === 'attributes' &&
-          mutation.target instanceof HTMLAnchorElement &&
-          mutation.attributeName === 'href'
-        ) {
-          shouldPatch = true;
-          break;
-        }
-      }
-
-      if (shouldPatch) {
-        patchExistingLinks(document);
-        translateClassAndSpecLabels();
-        translateCharacterProfile();
-      }
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['href'],
-    });
-
-    patchExistingLinks(document);
-    translateClassAndSpecLabels();
-    translateCharacterProfile();
   }
 
   function enableTwModeOnChartPages() {
     const charts = document.querySelectorAll('div.bloodmallet_chart');
     for (const chart of charts) {
-      // Ensure bloodmallet keeps using its zh-hans translation payload.
       chart.dataset.language = ZH_HANS_VALUE;
     }
 
     patchChartPrototypeWhenReady();
-    observeChartUpdates();
+
+    if (helper) {
+      helper.observe(document.body);
+      helper.startHistoryListener();
+      helper.runFullPass();
+    }
   }
 
   function enableTwModeOnIndexPage() {
@@ -565,59 +403,11 @@
       }
     }, 100);
 
-    const observer = new MutationObserver((mutations) => {
-      let shouldTranslate = false;
-
-      for (const mutation of mutations) {
-        if (mutation.type !== 'childList' || mutation.addedNodes.length === 0) {
-          continue;
-        }
-
-        for (const node of mutation.addedNodes) {
-          if (!(node instanceof Element)) {
-            continue;
-          }
-
-          if (
-            node.matches('#spec_table, .spec-cell, .spec-btn, [class*="translate_"]') ||
-            node.querySelector('#spec_table, .spec-cell, .spec-btn, [class*="translate_"]')
-          ) {
-            shouldTranslate = true;
-            break;
-          }
-        }
-
-        if (shouldTranslate) {
-          break;
-        }
-      }
-
-      if (shouldTranslate) {
-        translateIndexClassSpecLinks(document);
-      }
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
-
-    translateIndexClassSpecLinks(document);
-  }
-
-  // ── Wowhead widget 全域語系設定 ──
-  // 必須在 power.js 載入前跑（所以腳本改成 document-start，且不能等 DOMContentLoaded），
-  // 但只在使用者有開啟繁中模式時才覆蓋，否則維持 bloodmallet 原本的語言。
-  if (isTwModeEnabled()) {
-    window.Locale = {
-      getId: function () { return 10; },
-      getName: function () { return 'zhtw'; },
-    };
-
-    if (typeof window.whTooltips === 'undefined') {
-      window.whTooltips = {};
+    if (helper) {
+      helper.observe(document.body);
+      helper.startHistoryListener();
+      helper.runFullPass();
     }
-    window.whTooltips.domain = 'tw';
   }
 
   function start() {
@@ -634,8 +424,6 @@
     }
   }
 
-  // 腳本改到 document-start 才能在 power.js 之前設定 whTooltips，
-  // 但下面的邏輯都需要 DOM，所以等 DOMContentLoaded 再啟動。
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', start, { once: true });
   } else {
