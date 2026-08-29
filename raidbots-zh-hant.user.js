@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.5.3
+// @version      1.6.0
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
 // @match        https://raidbots.com/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.5.5
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.6.0
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=1
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/raidbots-zh-hant.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/raidbots-zh-hant.user.js
 // @run-at       document-start
@@ -170,274 +171,48 @@
   window.whTooltips.locale = 'zhtw';
   window.whTooltips.domain = 'tw';
 
-  const CLASS_TW_MAP = Object.freeze({
-    death_knight: '死亡騎士',
-    demon_hunter: '惡魔獵人',
-    druid: '德魯伊',
-    evoker: '喚能師',
-    hunter: '獵人',
-    mage: '法師',
-    monk: '武僧',
-    paladin: '聖騎士',
-    priest: '牧師',
-    rogue: '盜賊',
-    shaman: '薩滿',
-    warlock: '術士',
-    warrior: '戰士',
-  });
 
-  const SPEC_TW_MAP = Object.freeze({
-    affliction: '痛苦',
-    arcane: '秘法',
-    arms: '武器',
-    assassination: '刺殺',
-    augmentation: '強化',
-    balance: '平衡',
-    beast_mastery: '野獸控制',
-    blood: '血魄',
-    brewmaster: '釀酒',
-    demonology: '惡魔學識',
-    destruction: '毀滅',
-    devastation: '破滅',
-    devourer: '噬滅',
-    discipline: '戒律',
-    elemental: '元素',
-    enhancement: '增強',
-    feral: '野性戰鬥',
-    fire: '火焰',
-    frost: '冰霜',
-    fury: '狂怒',
-    guardian: '守護者',
-    havoc: '災虐',
-    holy: '神聖',
-    marksmanship: '射擊',
-    mistweaver: '禦霧',
-    outlaw: '暴徒',
-    preservation: '護存',
-    protection: '防護',
-    restoration: '恢復',
-    retribution: '懲戒',
-    shadow: '暗影',
-    subtlety: '敏銳',
-    survival: '生存',
-    unholy: '穢邪',
-    vengeance: '復仇',
-    windwalker: '御風',
-  });
 
-  const HERO_TALENT_TW_MAP = Object.freeze({
-    deathbringer: '死亡使者',
-    rider_of_the_apocalypse: '天啟騎士',
-    sanlayn: '煞婪',
-    aldrachi_reaver: '奧達奇劫奪者',
-    fel_scarred: '魔痕',
-    annihilator: '殲滅者',
-    elunes_chosen: '伊露恩之選',
-    keeper_of_the_grove: '林地看守者',
-    druid_of_the_claw: '利爪德魯伊',
-    wildstalker: '野地潛獵者',
-    chronowarden: '時光看守者',
-    flameshaper: '塑火者',
-    scalecommander: '龍隊指揮官',
-    dark_ranger: '黑暗遊俠',
-    pack_leader: '獸群領袖',
-    sentinel: '哨兵',
-    frostfire: '霜火',
-    spellslinger: '拋法者',
-    sunfury: '日怒',
-    conduit_of_the_celestials: '天尊引導者',
-    master_of_harmony: '和諧大師',
-    shadopan: '影潘',
-    herald_of_the_sun: '太陽先驅',
-    lightsmith: '光鑄師',
-    templar: '聖殿騎士',
-    archon: '御靈者',
-    oracle: '神諭者',
-    voidweaver: '虛織者',
-    deathstalker: '亡靈哨兵',
-    fatebound: '命縛者',
-    trickster: '欺詐者',
-    farseer: '先知',
-    stormbringer: '風暴使者',
-    totemic: '圖騰師',
-    diabolist: '崇魔者',
-    hellcaller: '喚魔者',
-    soul_harvester: '靈魂收割者',
-    colossus: '巨像',
-    mountain_thane: '山脈族長',
-    slayer: '殺戮者',
-  });
 
+  // 副本／團本／首領的譯名不寫在這裡 —— 由 libs/game-names-tw.js 提供，
+  // 該檔由 tools/generate-game-names.mjs 依暴雪官方 Journal API（zh_TW）產生。
+  //
+  // 以下只保留暴雪 Journal 沒有對應條目的 raidbots 自訂標籤（例如把 Mechagon
+  // 拆成工坊／廢料場、DOTI 與 Tazavesh 的分段）。新增副本請重跑產生器，不要加在這裡。
   const DUNGEON_TW_MAP = Object.freeze({
     // World of Warcraft: Midnight (12.0 / 12.1) - Raids (午夜團隊副本)
-    the_venomous_abyss: '劇毒深淵',
-    venomous_abyss: '劇毒深淵',
-    the_voidspire: '虛無之尖',
     march_on_queldanas: '進軍奎爾達納斯',
-    the_dreamrift: '夢境裂隙',
 
     // World of Warcraft: Midnight (12.1 Season 2) - Dungeons (午夜第 2 季地城)
-    altar_of_fangs: '毒牙祭壇',
-    the_altar_of_fangs: '毒牙祭壇',
-    murder_row: '兇殺路',
-    den_of_nalorakk: '納羅拉克之穴',
-    the_blinding_vale: '盲目谷地',
-    voidscar_arena: '虛痕競技場',
-    kings_rest: '諸王之眠',
-    the_kings_rest: '諸王之眠',
-    temple_of_sethraliss: '瑟沙利斯神廟',
-    the_temple_of_sethraliss: '瑟沙利斯神廟',
-    ruby_life_pools: '晶紅生命之池',
 
     // World of Warcraft: Midnight (12.0 Season 1) - Dungeons (午夜第 1 季地城)
-    windrunner_spire: '風行者之塔',
-    maisara_caverns: '麥薩拉洞穴',
-    nexus_point_xenas: '結點瑟納斯',
-    magisters_terrace: '博學者殿堂',
-    pit_of_saron: '薩倫之淵',
-    skyreach: '擎天峰',
-    seat_of_the_triumvirate: '三傑議會之座',
-    algethar_academy: '阿爾蓋薩學院',
 
     // The War Within - Raids (地心之戰團隊副本)
-    liberation_of_undermine: '解放幽坑城',
-    the_liberation_of_undermine: '解放幽坑城',
-    nerub_ar_palace: '奈幽巴宮殿',
-    nerubar_palace: '奈幽巴宮殿',
-    manaforge_omega: '法力靈爐歐米茄',
-    the_manaforge_omega: '法力靈爐歐米茄',
 
     // The War Within - Season 2 Dungeons (第 2 季地城)
-    operation_floodgate: '水閘行動',
     the_floodgate: '水閘行動',
-    cinderbrew_meadery: '燼釀酒莊',
-    the_cinderbrew_meadery: '燼釀酒莊',
-    the_rookery: '培育所',
-    rookery: '培育所',
-    darkflame_cleft: '暗焰裂縫',
-    the_darkflame_cleft: '暗焰裂縫',
-    priory_of_the_sacred_flame: '聖焰隱修院',
-    the_priory_of_the_sacred_flame: '聖焰隱修院',
-    the_motherlode: '晶喜鎮',
-    'the_motherlode!!': '晶喜鎮',
-    motherlode: '晶喜鎮',
     operation_mechagon_workshop: '機械岡行動 - 工坊',
     operation_mechagon_junkyard: '機械岡行動 - 廢料場',
-    operation_mechagon: '機械岡行動',
     mechagon_workshop: '機械岡行動 - 工坊',
     mechagon_junkyard: '機械岡行動 - 廢料場',
-    mechagon: '機械岡行動',
-    theater_of_pain: '苦痛劇場',
-    the_theater_of_pain: '苦痛劇場',
 
     // The War Within - Season 1 Dungeons (第 1 季地城)
-    ara_kara_city_of_echoes: '回音之城亞拉卡拉',
-    ara_kara: '回音之城亞拉卡拉',
-    arakara: '回音之城亞拉卡拉',
-    city_of_threads: '蛛絲之城',
-    the_stonevault: '石庫',
-    stonevault: '石庫',
-    the_dawnbreaker: '破曉者號',
-    dawnbreaker: '破曉者號',
-    mists_of_tirna_scithe: '特那希迷霧',
-    the_necrotic_wake: '瘟疫之歿',
-    necrotic_wake: '瘟疫之歿',
-    siege_of_boralus: '波拉勒斯圍城戰',
-    grim_batol: '格瑞姆巴托',
 
     // The War Within - Delves (探究)
-    earthcrawl_mines: '地掘礦坑',
-    fungal_folly: '菌菇愚行',
-    kriegvals_rest: '克里格瓦之眠',
-    nightfall_sanctum: '暮秋聖所',
-    skittering_breach: '飛掠裂隙',
-    the_dread_pit: '恐懼之坑',
-    the_sinkhole: '沉沒天坑',
-    the_spiral_weave: '螺旋編織',
-    the_underkeep: '地下堡壘',
-    the_waterworks: '供水廠',
-    tak_rethan_abyss: '塔克芮森深淵',
     mycomancers_cavern: '菌術師洞穴',
-    zekvirs_lair: '澤克維爾巢穴',
-    excavation_site_9: '第 9 號挖掘場',
-    demolition_dome: '爆破穹頂',
-    sidestreet_sluice: '側街水渠',
 
     // Midnight - Delves & Dungeons (午夜探究與地城)
-    the_tidebound_grotto: '浪縛石窟',
-    tidebound_grotto: '浪縛石窟',
 
     // Classic / Previous Expansions Dungeons & Raids
-    pit_of_saron: '薩倫之淵',
-    skyreach: '擎天峰',
-    seat_of_the_triumvirate: '三傑議會之座',
-    algethar_academy: '阿爾蓋薩學院',
-    nokhud_offensive: '諾庫德進攻據點',
-    the_nokhud_offensive: '諾庫德進攻據點',
-    brackenhide_hollow: '蕨皮谷',
-    halls_of_infusion: '灌注迴廊',
-    neltharus: '奈薩魯斯堡',
-    azure_vault: '蒼藍密庫',
-    the_azure_vault: '蒼藍密庫',
     uldaman_legacy_of_tyr: '奧達曼：提爾的遺產',
-    dawn_of_the_infinite: '永恆黎明',
     dotis_galakronds_fall: '永恆黎明：葛拉克朗殞命之地',
     dotis_murozonds_rise: '永恆黎明：姆多茲諾崛起',
     galakronds_fall: '葛拉克朗殞命之地',
     murozonds_rise: '姆多茲諾崛起',
-    vault_of_the_incarnates: '洪荒化身巨龍牢獄',
-    aberrus_the_shadowed_crucible: '亞貝魯斯，暗影蓄爐',
-    amirdrassil_the_dreams_hope: '阿梅達希爾，夢境希望',
-    amirdrassil: '阿梅達希爾',
-    halls_of_atonement: '贖罪之殿',
-    sanguine_depths: '血紅深淵',
-    spires_of_ascension: '晉升之巔',
-    plaguefall: '瘟疫之臨',
-    de_other_side: '彼界境地',
-    tazavesh_the_veiled_market: '塔札維許，帷幕市集',
     tazavesh_streets_of_wonder: '塔札維許：奇蹟街道',
     tazavesh_soleahs_gambit: '塔札維許：索利亞的計謀',
-    castle_nathria: '納撒亞城',
-    sanctum_of_domination: '統御聖所',
-    sepulcher_of_the_first_ones: '首創者聖塚',
-    ataldazar: '阿塔達薩',
-    freehold: '自由港',
-    waycrest_manor: '威克雷斯莊園',
-    shrine_of_the_storm: '風暴聖壇',
-    temple_of_sethraliss: '瑟沙利斯神廟',
-    underrot: '幽腐深窟',
-    the_underrot: '幽腐深窟',
-    tol_dagor: '托達戈爾',
-    blackrock_depths: '黑石深淵',
   });
 
-  const RACE_TW_MAP = Object.freeze({
-    human: '人類',
-    dwarf: '矮人',
-    night_elf: '夜精靈',
-    gnome: '地精',
-    draenei: '德萊尼',
-    worgen: '狼人',
-    pandaren: '熊貓人',
-    dracthyr: '半龍人',
-    void_elf: '虛無精靈',
-    lightforged_draenei: '光鑄德萊尼',
-    dark_iron_dwarf: '黑鐵矮人',
-    kul_tiran: '庫爾提拉斯人',
-    mechagnome: '機械侏儒',
-    orc: '獸人',
-    undead: '不死族',
-    tauren: '牛頭人',
-    troll: '食人妖',
-    blood_elf: '血精靈',
-    goblin: '哥布林',
-    nightborne: '夜裔精靈',
-    highmountain_tauren: '高嶺牛頭人',
-    maghar_orc: '瑪格哈獸人',
-    zandalari_troll: '贊達拉食人妖',
-    vulpera: '狐人',
-    earthen: '土靈',
-  });
 
   const EXACT_TW = Object.freeze({
     'Top Gear': '最佳配裝',
@@ -664,10 +439,10 @@
     Sources: '來源',
     'Show Previous Tiers': '顯示先前階段',
     'Raid Difficulty': '團隊副本難度',
-    'Raid Finder': '搜尋者',
+    'Raid Finder': '團隊搜尋器',
     Normal: '普通',
     Heroic: '英雄',
-    Mythic: '神話',
+    Mythic: '傳奇',
     'Items to Sim': '模擬物品',
     'Group By': '分組依據',
     'Item Slot': '物品欄位',
@@ -679,15 +454,8 @@
     Trinket: '飾品',
     'Trinket 1': '飾品 1',
     'Trinket 2': '飾品 2',
-    'Include All Items': '包含所有物品',
-    'Exclude All Items': '排除所有物品',
-    'Click any row or item to toggle inclusion in the sim': '點擊任何列或物品以切換是否納入模擬',
     'All items have been excluded. Please enable some to run Droptimizer': '所有物品均已被排除。請啟用部分物品以執行掉落最佳化',
-    'Include Off-Spec Items': '包含非本專精物品',
-    'Include Catalyst Items': '包含催化劑物品',
-    'Add Vault Socket': '加入寶庫插槽',
     'Preferred Gem:': '偏好寶石：',
-    'Preferred Gem': '偏好寶石',
     'Notes / Limitations': '注意事項 / 限制',
     'Run Droptimizer': '執行掉落最佳化',
     'Load from Armory': '從戰網檔案匯入',
@@ -710,9 +478,6 @@
     'SimC Notifications': 'SimC 通知',
     'The sim generated some warning/error messages. Check the "SimC Notifications" section for more details.':
       '模擬產生了一些警告/錯誤訊息。請查看「SimC 通知」區塊以了解更多細節。',
-    'DPS compared to your current gear.': '與目前裝備相比的 DPS。',
-    'Highlighted icons indicate 0.05% or better DPS increase.':
-      '醒目標示的圖示代表 DPS 提升 0.05% 以上。',
     'Heroic Vault': '英雄寶庫',
     'Mythic Vault': '傳奇寶庫',
     'Normal Vault': '普通寶庫',
@@ -781,11 +546,7 @@
     'PVP Season 3 (Honor)': '第 3 季 PVP（榮譽）',
 
     // Midnight - Raids (午夜團隊副本)
-    'The Venomous Abyss': '劇毒深淵',
-    'Venomous Abyss': '劇毒深淵',
-    'The Voidspire': '虛無之尖',
     'March on Quel\'Danas': '進軍奎爾達納斯',
-    'The Dreamrift': '夢境裂隙',
 
     // The Venomous Abyss Bosses (劇毒深淵首領 - 台服官方繁中)
     'Nek\'zali the Soulcoiler': '『纏魂者』尼札利',
@@ -808,53 +569,30 @@
     'Ulatek': '烏拉特克',
 
     // Midnight Season 2 Dungeons & Bosses (午夜第 2 季地城與首領 - 台服官方繁中)
-    'Altar of Fangs': '毒牙祭壇',
     'Rav\'i': '拉維',
     'High Evolutionist': '高階進化者',
     'Zul\'jan': '祖爾贊',
 
-    'Murder Row': '兇殺路',
-    'Den of Nalorakk': '納羅拉克之穴',
     'Nalorakk': '納羅拉克',
-    'The Blinding Vale': '盲目谷地',
-    'Voidscar Arena': '虛痕競技場',
 
-    'Kings\' Rest': '諸王之眠',
-    'Kings Rest': '諸王之眠',
     'The Golden Serpent': '黃金巨蛇',
     'Mchimba the Embalmer': '防腐者姆沁巴',
     'The Council of Tribes': '部族議會',
     'Dazar, The First King': '始祖之王達薩',
 
-    'Temple of Sethraliss': '瑟沙利斯神廟',
     'Adderis and Aspix': '艾德里斯與阿斯皮克斯',
     'Merektha': '梅雷克莎',
     'Galvazzt': '加瓦茲特',
     'Avatar of Sethraliss': '瑟沙利斯的化身',
 
-    'Ruby Life Pools': '晶紅生命之池',
     'Melidrussa Chillworn': '莫莉杜莎·霜亡',
     'Kokia Blazehoof': '柯奇亞·熾足',
     'Kyrakka and Erkhart Stormvein': '凱拉卡與埃克哈特·風脈',
 
     // Midnight Season 1 Dungeons (午夜第 1 季地城 - 台服官方繁中)
-    'Windrunner Spire': '風行者之塔',
-    'Maisara Caverns': '麥薩拉洞穴',
-    'Nexus-Point Xenas': '結點瑟納斯',
-    'Magisters\' Terrace': '博學者殿堂',
-    'Magisters Terrace': '博學者殿堂',
-    'Pit of Saron': '薩倫之淵',
-    'Skyreach': '擎天峰',
-    'Seat of the Triumvirate': '三傑議會之座',
-    'Algeth\'ar Academy': '阿爾蓋薩學院',
-    'Algethar Academy': '阿爾蓋薩學院',
 
     // The War Within - Raids (地心之戰團隊副本)
-    'Liberation of Undermine': '解放幽坑城',
     'The Liberation of Undermine': '解放幽坑城',
-    'Nerub-ar Palace': '奈幽巴宮殿',
-    'Manaforge Omega': '法力靈爐歐米茄',
-    'Manaforge Omega': '法力靈爐歐米茄',
 
     // Liberation of Undermine Bosses (解放幽坑城首領)
     'Vexie and the Geargrinders': '薇克希和齒輪幫',
@@ -890,20 +628,16 @@
     'Shurrai, Atrocity of the Undersea': '海底暴行舒瑞',
 
     // Season 2 Dungeons & Bosses (第 2 季地城與首領)
-    'Operation: Floodgate': '水閘行動',
-    'Operation Floodgate': '水閘行動',
     'Big Dahlia': '大達莉亞',
     'Demolition Duo': '爆破雙人組',
     'Swampface': '沼澤臉',
     'Geezle Gigazap': '吉澤爾·吉咖電',
 
-    'Cinderbrew Meadery': '燼釀酒莊',
     'Brew Master Aldryr': '釀酒大師艾德里爾',
     'I\'pa': '愛帕',
     'Benk Buzzbee': '班克·嗡蜂',
     'Goldie Baronbottom': '高蒂·男爵底',
 
-    'Darkflame Cleft': '暗焰裂縫',
     'Ol\' Waxbeard': '老蠟鬍',
     'Blazikon': '烈焰巨鳥',
     'The Candle King': '蠟燭之王',
@@ -911,26 +645,19 @@
     'The Darkness': '黑暗',
 
     'The Priory of the Sacred Flame': '聖焰隱修院',
-    'Priory of the Sacred Flame': '聖焰隱修院',
     'Captain Dailcry': '戴克里隊長',
     'Baron Braunpyre': '布朗派爾男爵',
     'Prioress Murrpray': '女修道院長穆爾普雷',
 
-    'The Rookery': '培育所',
-    'Rookery': '培育所',
     'Kyrioss': '基里奧斯',
     'Stormguard Gorrena': '風暴守衛戈雷納',
     'Voidstone Monstrosity': '虛無之石巨怪',
 
-    'The MOTHERLODE!!': '晶喜鎮',
-    'The Motherlode!!': '晶喜鎮',
-    'The Motherlode': '晶喜鎮',
     'Coin-Operated Crowd Pummeler': '投幣式群眾重擊者',
     'Azerokk': '艾澤洛克',
     'Rixxa Fluxflame': '瑞克莎·流火',
     'Mogul Razdunk': '商業大亨拉茲敦克',
 
-    'Theater of Pain': '苦痛劇場',
     'An Affront of Challengers': '挑戰者聚會',
     'Gorechop': '高爾喬普',
     'Xav the Unfallen': '不屈的薩夫',
@@ -952,51 +679,39 @@
     'HK-8 Aerial Oppression Unit': 'HK-8 空中壓制單位',
 
     // Season 1 Dungeons & Bosses (第 1 季地城與首領)
-    'Ara-Kara, City of Echoes': '回音之城亞拉卡拉',
-    'Ara-Kara': '回音之城亞拉卡拉',
     'Avanoxx': '阿瓦諾克斯',
     'Anub\'zekt': '阿努布澤克特',
     'Ki\'katal the Harvester': '收割者基卡塔爾',
 
-    'City of Threads': '蛛絲之城',
     'Orator Krix\'vizk': '演說者克里克斯維茲克',
     'Fangs of the Queen': '女王之牙',
     'The Coaglamation': '凝聚之物',
     'Coaglamation': '凝聚之物',
     'Izo, the Grand Splicer': '大接合師伊佐',
 
-    'The Stonevault': '石庫',
-    'Stonevault': '石庫',
     'E.D.N.A.': '愛德娜',
     'Skarmorak': '斯卡莫拉克',
     'Master Machinists': '機械大師',
     'Void Speaker Eirich': '虛無宣講者艾利希',
 
-    'The Dawnbreaker': '破曉者號',
-    'Dawnbreaker': '破曉者號',
     'Speaker Shadowcrown': '宣講者暗冠',
     'Anub\'ikkaj': '阿努比卡吉',
     'Rasha\'nan (The Dawnbreaker)': '羅夏南',
 
-    'Mists of Tirna Scithe': '特那希迷霧',
     'Ingra Maloch': '英格拉·馬羅克',
     'Mistcaller': '喚霧者',
     'Tred\'ova': '特雷多瓦',
 
-    'The Necrotic Wake': '瘟疫之歿',
-    'Necrotic Wake': '瘟疫之歿',
     'Blightbone': '凋骨',
     'Amarth, The Harvester': '收割者阿瑪斯',
     'Surgeon Stitchflesh': '縫肉外科醫生',
     'Nalthor the Rimebinder': '縛霜者納爾索',
 
-    'Siege of Boralus': '波拉勒斯圍城戰',
     'Chopper Redhook': '「屠夫」紅鉤',
     'Dread Captain Lockwood': '恐怖船長洛克伍德',
     'Hadal Darkfathom': '哈達爾·黑淵',
     'Viq\'Goth': '維克戈斯',
 
-    'Grim Batol': '格瑞姆巴托',
     'General Umbriss': '昂布里斯將軍',
     'Forgemaster Throngus': '鍛造大師索隆格斯',
     'Drahga Shadowburner': '達加·燃影者',
@@ -1088,28 +803,42 @@
     year: '年',
   });
 
-  // Wowhead 官方 widget (power.js) 正則解析需要乾淨的 subdomain 格式（如 tw.wowhead.com）
-  const WOWHEAD_HOST = /(?:^|\.)wowhead\.com$/i;
-  const WOWHEAD_LOCALE_SEGMENTS = new Set([
-    'www', 'en', 'de', 'es', 'fr', 'it', 'pt', 'ru', 'ko', 'cn', 'tw',
-  ]);
-  const TW_LOCALE = 'tw';
-  // 選擇器
-  const WOWHEAD_ITEM_OR_SPELL_LINK = 'a[href*="wowhead.com"][href*="item="],a[href*="wowhead.com"][href*="spell="],a[href*="wowhead.com"][href*="/item/"],a[href*="wowhead.com"][href*="/spell/"]';
   const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'CODE', 'PRE']);
   const SKIP_CLASS_KEYWORDS = ['ace_', 'CodeMirror', 'monaco-editor'];
   const ATTRIBUTE_SELECTOR = '[aria-label],[title],[placeholder],input[type="button"][value],input[type="submit"][value],input[type="reset"][value]';
   const ATTRIBUTE_NAMES = ['aria-label', 'title', 'placeholder'];
   const MAX_TERM_WORDS = 5;
 
+  // SPA 換頁時需重建（見 onUrlChange），避免舊節點被誤判為已翻譯
   let translatedNodeText = new WeakMap();
-  let wowheadRefreshTimer = null;
-  let wowheadRefreshRetries = 0;
-  const MAX_WOWHEAD_RETRIES = 30;
 
-  let pendingRoots = new Set();
-  let flushTimer = null;
-  let lastUrl = location.href;
+  // 由 @require 的 libs/game-names-tw.js 提供（暴雪 client DB2 的官方 zhTW），
+  // 該檔尚未產生時安全降級為查不到。
+  function gameNames() {
+    return typeof window !== 'undefined' ? window.WowGameNamesTw : null;
+  }
+
+  /** 副本／團本／首領 */
+  function lookupGameName(value) {
+    const table = gameNames();
+    if (!table || typeof table.lookup !== 'function' || !value) return null;
+    try {
+      return table.lookup(value);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /** 種族／職業／專精／英雄天賦 */
+  function lookupGameUnit(value) {
+    const table = gameNames();
+    if (!table || typeof table.lookupUnit !== 'function' || !value) return null;
+    try {
+      return table.lookupUnit(value);
+    } catch (_) {
+      return null;
+    }
+  }
 
   function normalizeKey(value) {
     return String(value || '')
@@ -1120,12 +849,16 @@
       .replace(/[\s-]+/g, '_');
   }
 
+  // 職業／專精／種族／英雄天賦的譯名不手寫，一律取自 libs/game-names-tw.js
   function translateName(value) {
-    const key = normalizeKey(value);
-    return HERO_TALENT_TW_MAP[key] || SPEC_TW_MAP[key] || CLASS_TW_MAP[key] || RACE_TW_MAP[key] || null;
+    return lookupGameUnit(value);
   }
 
   function translateDungeon(value) {
+    // 優先採用暴雪官方 zh_TW（生成檔），其次才是站台自訂標籤
+    const official = lookupGameName(value);
+    if (official) return official;
+
     const key = normalizeKey(value);
     return DUNGEON_TW_MAP[key] || null;
   }
@@ -1623,6 +1356,7 @@
   if (whHelper) {
     whHelper.registerNonItemNames(Object.keys(EXACT_TW));
     whHelper.registerDungeonMap(DUNGEON_TW_MAP);
+    whHelper.registerGameNameLookup(lookupGameName);
     whHelper.start();
   } else {
     // 獨立 Fallback 監聽器，防止 @require 載入失敗或快取未就緒時翻譯失效
