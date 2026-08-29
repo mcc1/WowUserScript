@@ -335,9 +335,8 @@
         const mainLinks = [];
         for (const link of links) {
           if (!(link instanceof HTMLAnchorElement)) continue;
-          const img = link.querySelector('img');
-          if (!img) continue;
-          if (img.height && img.height < 12) continue;
+          if (link.contains(textElement) || textElement.contains(link)) continue;
+          if (link.dataset.twWowheadLinked === 'true') continue;
           mainLinks.push(link);
         }
 
