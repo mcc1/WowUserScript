@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Archon.gg Traditional Chinese
 // @namespace    https://www.archon.gg/
-// @version      0.7.1
+// @version      0.8.0
 // @description  Translate archon.gg WoW build pages to Traditional Chinese.
 // @author       mcc
 // @match        https://www.archon.gg/wow/*
@@ -100,6 +100,8 @@
     'View All Gear Options': '查看所有裝備選項',
     'View Alternative Builds': '查看其他配置',
     'Weapons & Trinkets': '武器 & 飾品',
+    'Weapons': '武器',
+    'Best in Slot data provided by': '最佳裝備資料來源：',
 
     // 天賦相關
     'Talent': '天賦',
@@ -113,6 +115,17 @@
     'Open Report': '開啟報告',
     'Currently Selected': '目前選擇',
     'Recommended Class Tree': '推薦職業天賦',
+    'Recommended': '推薦',
+    'Alternative Talents': '替代天賦',
+    'Alternative Class Talents Trees': '替代職業天賦',
+    'Alternative Class Tree': '替代職業天賦',
+    'Show Alternative Class Trees': '顯示替代職業天賦',
+    'Show Full Tree': '顯示完整天賦',
+    'Talents Heatmap': '天賦熱點圖',
+    'Alternative Builds': '其他配置',
+    'Alternative Build': '其他配置',
+    'Top 100': '前 100 名',
+    'None': '無',
     'Alternative Class Talents': '替代職業天賦',
     'Export': '匯出',
     'Edit': '編輯',
@@ -187,6 +200,8 @@
     'Overview': '總覽',
     'Talents': '天賦',
     'Tier List': '強度排行',
+    'Talent Tree': '天賦',
+    'Talent Build': '天賦配置',
     'Build': '配置',
   });
 
@@ -313,6 +328,35 @@
       + '與' + joinTw(CONTENT_TW[match[4]], RANKING_SECTION_TW[match[5]]);
   }
 
+  const NUMBERED_RE = /^(.+?)\s+#(\d+)$/;
+  const CONTENT_PHRASE_RE = /^(Mythic\+|Raid)\s+(.+)$/;
+  const PARSES_RE = /^([\d.,]+[kKmM]?)\s+parses$/;
+
+  /**
+   * 「Mythic+ Talent Tree」→「傳奇鑰石天賦」。
+   * 標題被職業／專精 span 切開後會留下這種「內容 + 區段」的殘片。
+   */
+  function translateContentPhrase(text) {
+    const match = text.match(CONTENT_PHRASE_RE);
+    if (!match) return null;
+    const tail = TITLE_SUFFIX_TW[match[2]] || EXACT_TW[match[2]];
+    return tail ? CONTENT_TW[match[1]] + tail : null;
+  }
+
+  /** 「Alternative Class Tree #1」→「替代職業天賦 #1」 */
+  function translateNumbered(text) {
+    const match = text.match(NUMBERED_RE);
+    if (!match) return null;
+    const base = EXACT_TW[match[1]] || TITLE_SUFFIX_TW[match[1]];
+    return base ? `${base} #${match[2]}` : null;
+  }
+
+  /** 「138.5k parses」→「138.5k 筆解析」 */
+  function translateParseCount(text) {
+    const match = text.match(PARSES_RE);
+    return match ? `${match[1]} 筆解析` : null;
+  }
+
   function translateString(text) {
     if (!text) return null;
     const trimmed = text.trim();
@@ -354,8 +398,20 @@
       }
     }
 
+    // 標題被職業／專精 span 切開了，例如
+    //     <h1><span>Arcane Mage</span> Mythic+ Talent Tree</h1>
+    //     <h2>Recommended <span>Arcane Mage</span> Talent Tree Build</h2>
+    // 上面的 SORTED_SUFFIXES 分支永遠比不到 —— 它拿到的只有殘片。
+    // TITLE_SUFFIX_TW 原本只在那條分支裡查得到，這裡讓它也能單獨命中。
+    if (TITLE_SUFFIX_TW[trimmed] !== undefined) {
+      return text.replace(trimmed, TITLE_SUFFIX_TW[trimmed]);
+    }
+
     const templated = translateRankingHeading(trimmed)
       || translatePageTitle(trimmed)
+      || translateContentPhrase(trimmed)
+      || translateNumbered(trimmed)
+      || translateParseCount(trimmed)
       || translateKeyRange(trimmed)
       || translateRelativeTime(trimmed);
     if (templated) {
