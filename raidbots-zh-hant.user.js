@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.6.0
+// @version      1.6.1
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
@@ -327,7 +327,6 @@
     'For item search and tooltips only': '僅用於物品搜尋與提示',
     'Sign up for Raidbots Premium!': '註冊 Raidbots Premium！',
     'Skip the line, run larger sims, and more!': '跳過排隊、執行更大規模模擬，還有更多功能！',
-    UPG: '升級',
     Talent: '天賦',
     Instant: '瞬發',
     Passive: '被動',
@@ -718,6 +717,18 @@
     'Erudax, the Duke of Below': '「地底公爵」埃魯達克斯',
     'Erudax': '埃魯達克斯',
     'Include Off-Spec Items': '包含非主專精物品',
+    'Catalyst': '轉化',
+    'Great Vault Item': '大秘寶庫物品',
+    'Upgraded Item': '升級物品',
+    'Recraft': '重製',
+    'Token': '代幣',
+    'Runecarver Legendary': '符文雕刻師傳說',
+    'Removed Enchant': '已移除附魔',
+    'Removed Gems': '已移除寶石',
+    'Added Socket': '已新增插槽',
+    'Added Socket from Great Vault': '來自大秘寶庫的新增插槽',
+    'Modified Item': '已修改物品',
+    'Top Gear Search': '最佳配裝搜尋',
     'Include Catalyst Items': '包含催化劑物品',
     'Add Vault Socket': '新增寶庫插槽',
     'Preferred Gem': '偏好寶石',
@@ -764,6 +775,20 @@
     Jewelcrafting: '珠寶設計',
     Inscription: '銘文學',
     Archaeology: '考古學',
+  });
+
+  // raidbots 物品卡片上的徽章短碼（bundle 內的 shortName）。
+  // 只做大小寫敏感的完全比對，不進 EXACT_TW：EXACT_TW_CI 會自動衍生小寫鍵，
+  // 那會讓「Cat」（貓形態之類）這種普通字也被替換掉。
+  const ITEM_BADGE_TW = Object.freeze({
+    GV: '寶庫',    // Great Vault Item
+    CAT: '轉化',   // Catalyst
+    UPG: '升級',   // Upgraded Item
+    REC: '重製',   // Recraft
+    TOK: '代幣',   // Token
+    RL: '傳說',    // Runecarver Legendary
+    MOD: '改造',   // Removed Enchant / Removed Gems / Added Socket / Modified Item
+    TGS: '配裝',   // Top Gear Search
   });
 
   const EXACT_TW_CI = Object.freeze(
@@ -982,6 +1007,11 @@
     const trimmed = text.trim();
     if (!trimmed) {
       return null;
+    }
+
+    const badgeTw = ITEM_BADGE_TW[trimmed];
+    if (badgeTw && Object.prototype.hasOwnProperty.call(ITEM_BADGE_TW, trimmed)) {
+      return replaceTrimmed(text, trimmed, badgeTw);
     }
 
     const exact = EXACT_TW[trimmed];
