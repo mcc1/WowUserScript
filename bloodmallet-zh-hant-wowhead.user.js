@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bloodmallet Traditional Chinese Wowhead
 // @namespace    https://bloodmallet.com/
-// @version      0.5.2
+// @version      0.5.3
 // @description  Add zh-hant mode, switch item links/names to the zh-hant Wowhead locale, and translate class/spec labels.
 // @author       mcc
 // @match        https://bloodmallet.com/*
@@ -241,7 +241,7 @@
       if (twSpec) specEl.textContent = twSpec;
     }
 
-    // 2. 翻譯未填充物品時的部位佔位文字
+    // 2. 翻譯未填充物品時的部位佔位文字與已有裝備圖示
     for (const id of CHARACTER_PROFILE_SLOT_IDS) {
       const el = document.getElementById(id);
       if (!el) continue;
@@ -252,7 +252,6 @@
           el.textContent = translated;
         }
       } else {
-        // 如果已經有裝備圖示 <a>，確保其超連結為繁中並啟用 Rename / Tooltip
         const link = el.querySelector('a[href*="wowhead.com"]');
         if (link && helper) {
           const href = link.getAttribute('href') || '';
@@ -282,6 +281,10 @@
       if (text.includes('SimulationCraft settings')) {
         el.textContent = text.replace('SimulationCraft settings', 'SimulationCraft 設定');
       }
+    }
+
+    if (helper) {
+      helper.queueWowheadRefresh();
     }
   }
 
@@ -500,16 +503,27 @@
   }
 
   function enableTwModeOnChartPages() {
-    const charts = document.querySelectorAll('div.bloodmallet_chart');
-    for (const chart of charts) {
-      chart.dataset.language = ZH_HANS_VALUE;
-    }
-
     patchChartPrototypeWhenReady();
 
     if (helper) {
       helper.start();
     }
+
+    // 監聽並自動翻譯 Character profile
+    const metaObserver = new MutationObserver(() => {
+      translateCharacterProfile();
+    });
+
+    const metaTarget = document.getElementById('meta-info') || document.body;
+    metaObserver.observe(metaTarget, {
+      childList: true,
+      subtree: true,
+    });
+
+    translateCharacterProfile();
+    setTimeout(translateCharacterProfile, 500);
+    setTimeout(translateCharacterProfile, 1500);
+    setTimeout(translateCharacterProfile, 3000);
   }
 
   function enableTwModeOnIndexPage() {
