@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.3.3
+// @version      1.4.0
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
 // @match        https://raidbots.com/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.3.3
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.4.0
 // @run-at       document-start
 // @grant        none
 // @license      MIT
@@ -681,8 +681,21 @@
     'Eyes of the Eagle': '雄鷹之眼',
     "Nature's Fury": '自然之怒',
     "Silvermoon's Alacrity": '銀月敏捷',
-    "Silvermoon's Tenacity": '銀月堅韌',
     "Zul'jin's Mastery": '祖爾金專精',
+    'Mark of the Worldsoul': '世界之魂印記',
+    "Forest Hunter's Armor Kit": '森林獵人護甲片',
+    "Stormrider's Armor Kit": '風暴騎兵護甲片',
+    "Defender's Armor Kit": '防衛者護甲片',
+    'Dual-Flanged Core Drill': '雙凸緣核心鑽',
+    'Bifurcation Band': '分岔之戒',
+    'Signet of the Starved Beast': '飢餓狂獸印記',
+    "Blood Knight's Warblade": '血騎士戰刃',
+    Hunt: '狩獵',
+    'Veteran Midcrest': '精兵午夜紋章',
+    'Champion Midcrest': '勇士午夜紋章',
+    'Hero Midcrest': '英雄午夜紋章',
+    'Myth Midcrest': '神話午夜紋章',
+    'Weathered Midcrest': '風化午夜紋章',
     Voidforged: '卓越虛無鍛造',
     'Voidforged (Hero)': '卓越虛無鍛造（英雄）',
     'Voidforged (Myth)': '卓越虛無鍛造（神話）',
@@ -1317,6 +1330,31 @@
       const restTw = translateSuffix(rest) || EXACT_TW[rest] || EXACT_TW_CI[rest.toLowerCase()] || translateDungeon(rest);
       if (restTw && restTw !== rest) {
         return replaceTrimmed(text, trimmed, `- ${restTw}`);
+      }
+    }
+
+    const topGearGlobalSettingMatch = trimmed.match(/^Top Gear will use the global (.+?) setting$/i);
+    if (topGearGlobalSettingMatch) {
+      const param = topGearGlobalSettingMatch[1].trim();
+      const paramTw = EXACT_TW[param] || EXACT_TW_CI[param.toLowerCase()] || param;
+      return replaceTrimmed(text, trimmed, `Top Gear 將使用全域 ${paramTw} 設定`);
+    }
+
+    const lowLevelHiddenMatch = trimmed.match(/^(\d+)\s+low\s+level\s+items?\s+hidden\.\s*(.+)$/i);
+    if (lowLevelHiddenMatch) {
+      const count = lowLevelHiddenMatch[1];
+      const rest = lowLevelHiddenMatch[2].trim();
+      const restTw = EXACT_TW[rest] || EXACT_TW_CI[rest.toLowerCase()] || rest;
+      return replaceTrimmed(text, trimmed, `${count} 件低等級物品已隱藏。${restTw}`);
+    }
+
+    const ilvlEnchantMatch = trimmed.match(/^(\d+)\s+(.+)$/);
+    if (ilvlEnchantMatch) {
+      const ilvl = ilvlEnchantMatch[1];
+      const rest = ilvlEnchantMatch[2].trim();
+      const restTw = EXACT_TW[rest] || EXACT_TW_CI[rest.toLowerCase()] || translateName(rest);
+      if (restTw && restTw !== rest) {
+        return replaceTrimmed(text, trimmed, `${ilvl} ${restTw}`);
       }
     }
 

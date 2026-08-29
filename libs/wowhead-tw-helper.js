@@ -326,11 +326,11 @@
      * @returns {HTMLAnchorElement|null}
      */
     findNearestWowheadIconLink(textElement) {
-      // 1. 優先透過 closest 判定是否位於明確的單一裝備卡片/行中（支援帶插槽寶石的裝備）
+      // 1. 優先透過 closest 判定是否位於明確的單一裝備卡片/行中（支援帶插槽寶石與 noLink: true 的裝備）
       const itemCard =
         typeof textElement.closest === 'function'
           ? textElement.closest(
-              '[data-testid^="droptimizer-item-"], [data-testid^="item-option-"], .DroptimizerRow, .ItemOption, [class*="droptimizerItem"], [class*="DroptimizerRow"]'
+              '[data-testid^="droptimizer-item-"], [data-testid^="item-option-"], .DroptimizerRow, .ItemOption, [class*="droptimizerItem"], [class*="DroptimizerRow"], div.item, [id$="/item"]'
             )
           : null;
 
@@ -342,6 +342,17 @@
           if (link.dataset.twWowheadLinked === 'true') continue;
           // 單一卡片內的第一個有效 Wowhead 連結必為裝備本體（後續為鑲嵌的插槽寶石）
           return link;
+        }
+
+        // 支援 Top Gear 等使用 noLink: true 的裝備卡片（從 img.src 提取 itemId）
+        const img = itemCard.querySelector('img[src*="/id/item/"], img[src*="/id/spell/"]');
+        if (img) {
+          const m = (img.getAttribute('src') || '').match(/\/id\/(item|spell)\/(\d+)\.png/);
+          if (m) {
+            const fakeLink = document.createElement('a');
+            fakeLink.setAttribute('href', `//tw.wowhead.com/${m[1]}=${m[2]}`);
+            return fakeLink;
+          }
         }
       }
 
