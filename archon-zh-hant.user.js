@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Archon.gg Traditional Chinese
 // @namespace    https://www.archon.gg/
-// @version      0.6.0
+// @version      0.7.0
 // @description  Translate archon.gg WoW build pages to Traditional Chinese.
 // @author       mcc
 // @match        https://www.archon.gg/wow/*
@@ -146,6 +146,21 @@
     'Remove Descriptive Text': '移除說明文字',
     'Advanced Settings': '進階設定',
 
+    // 排行／強度排行頁
+    // Role：暴雪官方職業頁只列出坦克／治療者／傷害三個值，沒有給這三者一個
+    // 上位詞。「職務」取自遊戲內團隊搜尋器，屬非官方查證。不用「角色」——
+    // WoW 的角色一律指 character（見 bloodmallet 的 Character profile 角色配置）。
+    'Role': '職務',
+    'Specialization': '專精',
+    'M+ Score': '傳奇鑰石分數',
+    'Parses': '解析',
+    'Score': '分數',
+    'Tier': '階級',
+    'Disclaimers & FAQ': '免責聲明 & 常見問題',
+    "What's this?": '這是什麼？',
+    'Open Menu': '開啟選單',
+    'Close Ad': '關閉廣告',
+
     // 遊戲版本選單
     'WoW - Midnight': 'WoW - 午夜',
     'WoW - MoP': 'WoW - 潘達利亞之霧',
@@ -214,6 +229,90 @@
     return translated.join(' / ');
   }
 
+  // ── 排行頁樣板 ────────────────────────────────────────────────────────────
+  // 排行頁標題是樣板組出來的：{職責} {區段} for {鑰石範圍} {內容}。職責 3 種 ×
+  // 區段 2 種 × 內容 2 種，而鑰石範圍還隨篩選器變動 —— 把組合寫進 EXACT_TW 會
+  // 爆炸，而且使用者一換篩選就失效。跟 translateSpecClassPhrase 同樣走樣式比對。
+
+  const ROLE_TW = Object.freeze({
+    'DPS': 'DPS',
+    'Tank': '坦克',
+    'Healer': '治療者',
+  });
+
+  const RANKING_SECTION_TW = Object.freeze({
+    'Tier List': '強度排行',
+    'Rankings': '排行榜',
+  });
+
+  const CONTENT_TW = Object.freeze({
+    'Mythic+': '傳奇鑰石',
+    'Raid': '團隊副本',
+  });
+
+  // 資料片名不另開字典 —— 從既有的遊戲版本選單項目推出來，免得兩處要同步。
+  const EXPANSION_PREFIX = 'WoW - ';
+  const EXPANSION_TW = Object.freeze(Object.fromEntries(
+    Object.entries(EXACT_TW)
+      .filter(([en]) => en.startsWith(EXPANSION_PREFIX))
+      .map(([en, tw]) => [en.slice(EXPANSION_PREFIX.length), tw.slice(EXPANSION_PREFIX.length)])
+  ));
+
+  const TIME_UNIT_TW = Object.freeze({
+    second: '秒', minute: '分鐘', hour: '小時',
+    day: '天', week: '週', month: '個月', year: '年',
+  });
+
+  const KEY_RANGE_RE = /^\+(\d+)\s+to\s+\+(\d+)$/;
+  const RELATIVE_TIME_RE = /^(\d+)\s+(second|minute|hour|day|week|month|year)s?\s+ago$/i;
+  const RANKING_HEADING_RE = /^(DPS|Tank|Healer)\s+(Tier List|Rankings)\s+for\s+(.+?)\s+(Mythic\+|Raid)$/;
+  const PAGE_TITLE_RE = /^(\S+)\s+(DPS|Tank|Healer)\s+(Tier List|Rankings)\s+and\s+(Mythic\+|Raid)\s+(Tier List|Rankings)$/;
+
+  /**
+   * 依正體中文排版慣例接字：中西文之間補一個半形空格，中文與中文之間不補。
+   * 直接用空格串會得到「傳奇鑰石 坦克 排行榜」這種被切碎的讀感，
+   * 直接相接又會得到「DPS排行榜」這種黏住的西文。
+   */
+  function joinTw(...parts) {
+    return parts.filter(Boolean).reduce((acc, part) => {
+      if (!acc) return part;
+      const needsSpace = /[A-Za-z0-9+]$/.test(acc) || /^[A-Za-z0-9+]/.test(part);
+      return acc + (needsSpace ? ' ' : '') + part;
+    }, '');
+  }
+
+  /** 「+7 to +19」→「+7 到 +19」 */
+  function translateKeyRange(text) {
+    const match = text.match(KEY_RANGE_RE);
+    return match ? `+${match[1]} 到 +${match[2]}` : null;
+  }
+
+  /** 「1 day ago」→「1 天前」 */
+  function translateRelativeTime(text) {
+    const match = text.match(RELATIVE_TIME_RE);
+    if (!match) return null;
+    const unit = TIME_UNIT_TW[match[2].toLowerCase()];
+    return unit ? `${match[1]} ${unit}前` : null;
+  }
+
+  /** 「DPS Tier List for +7 to +19 Mythic+」→「+7 到 +19 傳奇鑰石 DPS 強度排行」 */
+  function translateRankingHeading(text) {
+    const match = text.match(RANKING_HEADING_RE);
+    if (!match) return null;
+    const range = translateKeyRange(match[3]) || match[3];
+    return joinTw(range, CONTENT_TW[match[4]], ROLE_TW[match[1]], RANKING_SECTION_TW[match[2]]);
+  }
+
+  /** 「Midnight DPS Rankings and Mythic+ Tier List」→「午夜 DPS 排行榜與傳奇鑰石強度排行」 */
+  function translatePageTitle(text) {
+    const match = text.match(PAGE_TITLE_RE);
+    if (!match) return null;
+    const expansion = EXPANSION_TW[match[1]];
+    if (!expansion) return null;
+    return joinTw(expansion, ROLE_TW[match[2]], RANKING_SECTION_TW[match[3]])
+      + '與' + joinTw(CONTENT_TW[match[4]], RANKING_SECTION_TW[match[5]]);
+  }
+
   function translateString(text) {
     if (!text) return null;
     const trimmed = text.trim();
@@ -253,6 +352,14 @@
           return text.replace(trimmed, `${prefixTw} ${TITLE_SUFFIX_TW[suffix]}`);
         }
       }
+    }
+
+    const templated = translateRankingHeading(trimmed)
+      || translatePageTitle(trimmed)
+      || translateKeyRange(trimmed)
+      || translateRelativeTime(trimmed);
+    if (templated) {
+      return text.replace(trimmed, templated);
     }
 
     return null;
