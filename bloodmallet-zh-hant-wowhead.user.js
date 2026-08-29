@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bloodmallet Traditional Chinese Wowhead
 // @namespace    https://bloodmallet.com/
-// @version      0.7.1
+// @version      0.8.0
 // @description  Add zh-hant mode, switch item links/names to the zh-hant Wowhead locale, and translate class/spec labels.
 // @author       mcc
 // @match        https://bloodmallet.com/*
@@ -102,7 +102,7 @@
 
   const isSettingsPage = location.pathname === '/settings/general';
   const isChartPage = location.pathname.startsWith('/chart/');
-  const isIndexPage = /^\/(?:index\/?)?$/.test(location.pathname);
+  const isIndexPage = /^\/(?:index(?:\.html?)?\/?)?$/.test(location.pathname);
 
   function normalizeKey(value) {
     return String(value || '')
@@ -246,6 +246,74 @@
     } catch (_) {}
   }
 
+  // ── bloodmallet 語言表註冊 ──────────────────────────────────────────────
+  // 站方改版後（bm-utils.js）用 bmUtils.languageMap 把站台語言碼對應到資料語
+  // 言碼，再用 bmUtils.wowheadSubdomains 決定 Wowhead 子網域。兩張表都沒有
+  // zh-hant，而 detectUserLanguage() 對未登記的值是原樣穿透的：
+  //     'zh-hant' → 'zh-hant' → wowheadSubdomains['zh-hant'] === undefined
+  // 整條鏈於是崩回英文。這就是「zh-hant 一旦真的送到伺服器，之後每次載入都
+  // 變英文」的成因 — 不是我們的覆蓋層失效，是站方的查表失敗。
+  //
+  // 對應到 cn_CN 而非 zh_TW 是刻意的：資料與品名仍走站方既有的 cn 管線，我們
+  // 在其上用 Wowhead zhTW 重寫，現行行為完全不變；差別只在 zh-hant 漏到伺服
+  // 器時不再炸成英文。若日後確認站方資料支援 zh_TW，改這個常數即可。
+  const BM_LANGUAGE_FALLBACK = 'cn_CN';
+
+  function registerZhHantLanguage(utils) {
+    if (!utils || utils.__twZhHantRegistered) return false;
+
+    const map = utils.languageMap;
+    if (!map || typeof map !== 'object') return false;
+
+    if (!map[ZH_HANT_VALUE]) {
+      map[ZH_HANT_VALUE] = BM_LANGUAGE_FALLBACK;
+    }
+
+    // 讓站方自己產生的 Wowhead 連結直接指向 tw，少一輪事後重寫
+    const subdomains = utils.wowheadSubdomains;
+    if (subdomains && typeof subdomains === 'object' && !subdomains.zh_TW) {
+      subdomains.zh_TW = 'tw';
+    }
+
+    utils.__twZhHantRegistered = true;
+    return true;
+  }
+
+  /**
+   * bmUtils 是 bm-utils.js 在 document-start 之後才掛上 window 的，
+   * 用 setter 在賦值當下註冊以避免 race，另備輪詢作為保險。
+   */
+  function registerZhHantLanguageWhenReady() {
+    if (registerZhHantLanguage(window.bmUtils)) return;
+
+    let current = window.bmUtils;
+    try {
+      Object.defineProperty(window, 'bmUtils', {
+        configurable: true,
+        enumerable: true,
+        get() { return current; },
+        set(value) {
+          current = value;
+          registerZhHantLanguage(value);
+        },
+      });
+    } catch (_) {
+      // defineProperty 被擋下就純靠下面的輪詢
+    }
+
+    let retries = 0;
+    const intervalId = window.setInterval(() => {
+      retries += 1;
+      if (registerZhHantLanguage(window.bmUtils) || retries >= 120) {
+        window.clearInterval(intervalId);
+      }
+    }, 100);
+  }
+
+  // @run-at document-start：立刻裝上攔截，趕在 bm-utils.js 賦值之前。
+  // 放進 start() 就太晚了 — DOMContentLoaded 時 bmUtils 早已掛好，setter 攔不到。
+  registerZhHantLanguageWhenReady();
+
   function injectZhHantOption() {
     const select = document.querySelector('select#language_selection[name="language"]');
     const form = select ? select.closest('form[action="/i18n/setlang/"]') : null;
@@ -386,69 +454,106 @@
     });
   }
 
-  function patchChartPrototypeWhenReady() {
-    let retries = 0;
-    const maxRetries = 120;
+  // ── 長條圖 tooltip 品名同步 ────────────────────────────────────────────
+  // .bm-key 的品名是 <a data-wh-rename-link>，Wowhead widget 會把它的文字節點
+  // 換成 zhTW。但 .bm-bar 的 tooltip 是 render 當下就序列化進
+  // data-bm-tooltip-text 屬性的一段 HTML 字串 — widget 改得到文字節點，改不到
+  // 屬性，於是 bar 的標題永遠停在站台語言（cn_CN → 简中）。
+  //
+  // 這不是漏翻字典，是屬性裡的 HTML 快照沒人更新；同一列正確的品名就在旁邊，
+  // 回填即可，不需要查表也不需要再打一次 Wowhead。
+  const TOOLTIP_TITLE_RE = /(<div class="bm-tooltip-title">)([\s\S]*?)(<\/div>)/;
 
-    const intervalId = window.setInterval(() => {
-      retries += 1;
-      const Ctor = window.BmChartData;
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
 
-      if (!Ctor || !Ctor.prototype) {
-        if (retries >= maxRetries) {
-          window.clearInterval(intervalId);
-        }
-        return;
+  /** 取該列的品名文字，扣掉 Wowhead 圖示 span */
+  function getRowItemName(row) {
+    const link = row.querySelector('.bm-key a');
+    if (!link) return '';
+
+    let text = '';
+    for (const node of link.childNodes) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        text += node.textContent;
+      } else if (node.nodeType === Node.ELEMENT_NODE && !node.classList.contains('iconsmall')) {
+        text += node.textContent;
+      }
+    }
+    return text.trim();
+  }
+
+  function syncBarTooltipNames(root) {
+    const scope = root && root.querySelectorAll ? root : document;
+    const rows = scope.querySelectorAll('.bm-row');
+    let updated = 0;
+
+    for (const row of rows) {
+      const bar = row.querySelector('.bm-bar[data-bm-tooltip-text]');
+      if (!bar) continue;
+
+      const name = getRowItemName(row);
+      if (!name) continue;
+
+      const raw = bar.getAttribute('data-bm-tooltip-text') || '';
+      const match = raw.match(TOOLTIP_TITLE_RE);
+      if (!match) continue;
+
+      const escaped = escapeHtml(name);
+      if (match[2] === escaped) continue;
+
+      bar.setAttribute(
+        'data-bm-tooltip-text',
+        raw.replace(TOOLTIP_TITLE_RE, (whole, open_, _old, close) => open_ + escaped + close)
+      );
+
+      // bm-tooltips.js 的 create_tooltip() 是在 mouseover 當下才讀這個屬性、
+      // mouseleave 就把節點丟掉，所以改屬性下次 hover 就生效。這裡只補「回填
+      // 剛好發生在使用者正懸停時」那一瞬間的殘影。
+      const tooltipId = bar.getAttribute('data-bm-tooltip-id');
+      const live = tooltipId ? document.getElementById(tooltipId) : null;
+      const liveTitle = live ? live.querySelector('.bm-tooltip-title') : null;
+      if (liveTitle && liveTitle.textContent !== name) {
+        liveTitle.textContent = name;
       }
 
-      if (Ctor.prototype.__twWowheadPatched) {
-        window.clearInterval(intervalId);
-        return;
-      }
+      updated += 1;
+    }
 
-      const originalGetUrl = Ctor.prototype._get_wowhead_url;
-      if (typeof originalGetUrl === 'function' && helper) {
-        Ctor.prototype._get_wowhead_url = function (key) {
-          let originalUrl = originalGetUrl.call(this, key);
-          if (typeof originalUrl !== 'string') {
-            return originalUrl;
-          }
-          return helper.toTwWowheadUrl(originalUrl) || originalUrl;
-        };
-      }
+    return updated;
+  }
 
-      const originalGetLink = Ctor.prototype.get_wowhead_link;
-      if (typeof originalGetLink === 'function') {
-        Ctor.prototype.get_wowhead_link = function (key) {
-          const linkNode = originalGetLink.call(this, key);
-          if (linkNode && linkNode.nodeType === Node.ELEMENT_NODE && linkNode.tagName === 'A') {
-            linkNode.dataset.whRenameLink = 'true';
-            linkNode.setAttribute('data-wh-rename-link', 'true');
-            if (helper) {
-              const href = linkNode.getAttribute('href');
-              if (href) {
-                const twHref = helper.toTwWowheadUrl(href);
-                if (twHref) linkNode.setAttribute('href', twHref);
-              }
-              helper.applyTwDomainToDataWowhead(linkNode);
-              helper.queueWowheadRefresh();
-            }
-          }
-          return linkNode;
-        };
-      }
+  let barSyncQueued = false;
 
-      Ctor.prototype.__twWowheadPatched = true;
-      window.clearInterval(intervalId);
+  function watchBarTooltips() {
+    const chart = document.getElementById('chart') || document.body;
 
-      if (helper) {
-        helper.runFullPass();
-      }
-    }, 100);
+    // Wowhead 改名是非同步的，圖表本身切換資料時也會重繪，兩邊都要跟。
+    // 回填後再次掃描會因為名稱已相同而不產生變動，所以不會無限循環。
+    const observer = new MutationObserver(() => {
+      if (barSyncQueued) return;
+      barSyncQueued = true;
+      window.requestAnimationFrame(() => {
+        barSyncQueued = false;
+        syncBarTooltipNames();
+      });
+    });
+
+    observer.observe(chart, { childList: true, subtree: true, characterData: true });
+
+    syncBarTooltipNames();
+    setTimeout(syncBarTooltipNames, 500);
+    setTimeout(syncBarTooltipNames, 1500);
+    setTimeout(syncBarTooltipNames, 3000);
   }
 
   function enableTwModeOnChartPages() {
-    patchChartPrototypeWhenReady();
+    watchBarTooltips();
 
     if (helper) {
       helper.start();
