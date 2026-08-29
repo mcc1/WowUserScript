@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Archon.gg Traditional Chinese
 // @namespace    https://www.archon.gg/
-// @version      0.10.0
+// @version      0.11.0
 // @description  Translate archon.gg WoW build pages to Traditional Chinese.
 // @author       mcc
 // @match        https://www.archon.gg/wow/*
@@ -546,6 +546,87 @@
     }
   }
 
+  // ── 網址驅動的標籤同步 ──────────────────────────────────────────────────
+  // 原本是被動的：等 React 把英文寫進 DOM，我們再翻。用篩選列的下拉選單切換職業
+  // 時，網址已經換成 /preservation/evoker/，畫面上卻還留著「秘法 法師」——
+  // React 沒有重寫那些節點，而且沒有丟任何例外（console 乾淨，快取也每次重建）。
+  // 追不到它為什麼不寫，所以改成不依賴它：網址本身就是真相，直接算出來寫進去。
+  //
+  // 這比繞過一個 bug 重要。被動模式會讓錯誤看起來像對的 —— 使用者看到
+  // 「武器 戰士」配著治療者的 HPS 數據，不會發現自己在看錯的東西。
+  //
+  //   /wow/builds/<專精>/<職業>/<內容>/...
+  const BUILD_PATH_RE = /^\/wow\/builds\/([^/]+)\/([^/]+)\//;
+
+  function getUrlSpecAndClass() {
+    const match = location.pathname.match(BUILD_PATH_RE);
+    if (!match) return null;
+
+    // slug 直接查即可 —— lookupUnit 會正規化掉連字號（demon-hunter → demonhunter）
+    const specTw = lookupGameUnit(match[1]);
+    const classTw = lookupGameUnit(match[2]);
+    return specTw && classTw ? { specTw: specTw, classTw: classTw } : null;
+  }
+
+  /** 只改元素內字最多的那個文字節點，避免動到職業圖示之類的子元素 */
+  function setLeafText(element, text) {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let best = null;
+    let bestLength = -1;
+    let node;
+
+    while ((node = walker.nextNode())) {
+      const length = node.textContent.trim().length;
+      if (length > bestLength) { best = node; bestLength = length; }
+    }
+
+    if (best) {
+      if (best.textContent.trim() !== text) best.textContent = text;
+    } else if (element.textContent.trim() !== text) {
+      element.textContent = text;
+    }
+  }
+
+  // 篩選列的標籤可能還是英文，也可能已經被我們翻過了，兩種都要認得
+  const FILTER_LABEL_KIND = Object.freeze({
+    'Class': 'class', '職業': 'class',
+    'Spec': 'spec', '專精': 'spec',
+  });
+
+  function syncFilterLabelsFromUrl() {
+    const parts = getUrlSpecAndClass();
+    if (!parts) return;
+
+    for (const select of document.querySelectorAll('.menu-select')) {
+      const group = select.closest('.vertical-content') || select.parentElement;
+      const label = group ? group.querySelector('b') : null;
+      if (!label) continue;
+
+      const kind = FILTER_LABEL_KIND[label.textContent.trim()];
+      if (!kind) continue;
+
+      const value = select.querySelector('.menu-select__single-value');
+      if (value) setLeafText(value, kind === 'class' ? parts.classTw : parts.specTw);
+    }
+  }
+
+  function syncSpecClassLabelsFromUrl() {
+    const parts = getUrlSpecAndClass();
+    if (!parts) return;
+
+    const wanted = `${parts.specTw} ${parts.classTw}`;
+    for (const el of document.querySelectorAll('span.do-not-change-color-on-hover')) {
+      if (el.childElementCount > 0) continue;
+      // 選單裡列的是「所有」專精，不是目前這個，不能一起蓋掉
+      if (el.closest('[class*="Menu"], [class*="menu-select"], nav')) continue;
+      // 選單項目是單一專精名（Frost），沒有空格；標題才是「專精 職業」的組合
+      const current = el.textContent.trim();
+      if (!current || current.indexOf(' ') === -1) continue;
+
+      if (current !== wanted) el.textContent = wanted;
+    }
+  }
+
   function translateBreadcrumbs() {
     const specLabels = document.querySelectorAll('span.do-not-change-color-on-hover');
     for (const el of specLabels) {
@@ -569,6 +650,9 @@
     onScan: (root) => {
       walkTextNodes(root);
       translateBreadcrumbs();
+      // 一定要排在翻譯之後 —— 網址算出來的值優先於 DOM 上讀到的
+      syncFilterLabelsFromUrl();
+      syncSpecClassLabelsFromUrl();
     },
     onUrlChange: () => {
       translatedNodeText = new WeakMap();
