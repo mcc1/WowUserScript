@@ -271,20 +271,16 @@
     isLikelyItemOrEnchantName(text) {
       if (!text) return false;
       const value = text.trim();
-      if (value.length < 4 || value.length > 64) return false;
+      if (value.length < 2 || value.length > 80) return false;
 
       const lower = value.toLowerCase();
       if (this.nonItemNames.has(lower)) return false;
       if (this.dungeonKeys.has(lower)) return false;
 
-      // 含有中文字元代表已經被翻譯，絕不可再被 Wowhead rename 覆蓋
+      // 含有中文字元代表已經是繁中，不需再處理
       if (/[\u4e00-\u9fa5]/.test(value)) return false;
       if (!/[A-Za-z]/.test(value)) return false;
-      if (/[0-9:/()[\]{}]/.test(value)) return false;
-      if (/^[a-z\s'-]+$/.test(value)) return false;
-
-      const words = value.split(/\s+/).filter(Boolean);
-      if (words.length > 10) return false;
+      if (/[<>{}\\]/.test(value)) return false;
 
       return true;
     }
@@ -420,26 +416,12 @@
       const originalText = (nameElement.textContent || '').trim();
       if (!this.isLikelyItemOrEnchantName(originalText)) return false;
 
-      let scope = nameElement.parentElement;
-      for (let depth = 0; depth < 4 && scope; depth += 1) {
-        const existingAnchors = scope.querySelectorAll('a[data-wh-rename-link="true"]');
-        for (const existing of existingAnchors) {
-          if (
-            existing !== iconLink &&
-            !nameElement.contains(existing) &&
-            existing.getAttribute('href') === twHref
-          ) {
-            return false;
-          }
-        }
-        scope = scope.parentElement;
-      }
-
       const anchor = document.createElement('a');
       anchor.setAttribute('href', twHref);
       anchor.setAttribute('rel', 'noopener');
       anchor.setAttribute('target', '_blank');
       anchor.dataset.whRenameLink = 'true';
+      anchor.setAttribute('data-wh-rename-link', 'true');
       anchor.style.color = 'inherit';
       anchor.style.textDecoration = 'none';
       anchor.textContent = originalText;
