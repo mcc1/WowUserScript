@@ -107,8 +107,11 @@ new WowheadTwHelper({ onScan, onUrlChange })
 |---|---|
 | `lookup(en)` | 副本／團本／首領 → 官方繁中，查不到回 `null` |
 | `lookupUnit(en)` | 種族／職業／專精／英雄天賦 → 官方繁中 |
-| `UNIT_LISTS` | 各分類的官方**英文**名清單，供前綴比對／CSS class 偵測（archon 要把
-  「Frost Mage」拆成專精 + 職業；bloodmallet 要從 `translate_death_knight` 認出職業） |
+| `UNIT_LISTS` | 各分類的官方**英文**名清單，供前綴比對／CSS class 偵測 |
+
+`UNIT_LISTS` 的用途：archon 要把「Frost Mage」拆成專精 + 職業，
+bloodmallet 要從 `translate_death_knight` 這種 CSS class 認出職業 —— 兩者都需要
+英文名清單，那是英文資料不是翻譯。
 
 查詢會正規化（轉小寫、去掉非英數），所以 `death_knight`、`Death Knight`、
 `DEATH-KNIGHT` 都命中同一筆。另外會自動推導 `The X` ↔ `X`、以及逗號前的短寫法
@@ -164,11 +167,36 @@ node tools/generate-game-names.mjs --self-test   # 產生器模板
 
 重點確認：**沒有無限迴圈**（observer 改 DOM → 觸發自己）與**沒有把使用者輸入框內容翻掉**。
 
+## Linkify 的陷阱（踩過一次，別再踩）
+
+`enableSafeLinkify` 會把「看起來像裝備名的純文字」轉成 Wowhead 連結並標上
+`data-wh-rename-link`，接著 Wowhead widget 會**把那段文字改寫成該物品的資料庫名稱**。
+這代表任何被誤判的文字都會被整段換掉，而不只是被加上連結。
+
+實際事故：raidbots 疊在裝備圖示左上角的徽章 `CAT` 被判定為裝備名，
+`findNearestWowheadIconLink` 又從圖示的 `img[src*="/id/item/"]` 解出了物品，
+於是徽章被改寫成套裝裝備的名稱。`UPG` 沒出事純屬巧合 —— 它早就在 `EXACT_TW` 裡，
+而 `registerNonItemNames(Object.keys(EXACT_TW))` 剛好保護到它。
+
+兩個必須記住的點：
+
+1. **`flushPendingRoots` 裡 linkify 先跑、`onScan`（翻譯）後跑。**
+   被 linkify 換掉的文字，翻譯階段永遠看不到。改字典救不了這種問題。
+2. 新增任何疊在圖示上的短標籤時，要一併加進 `registerNonItemNames`。
+   函式庫本身已擋掉「5 字元以內的全大寫字串」（真正的裝備名一定含小寫字母）。
+
+## 已定案的行為，不要「修正」回去
+
+- **catalyst（CAT）那一列顯示的是原始掉落裝備名，不是轉化後的套裝件名。**
+  raidbots 原生顯示套裝件名，是我們的 Wowhead 改名蓋掉了它。
+  使用者看過兩種版本後明確選擇保留現在這樣（2026-08-29）。這是刻意的，不是 bug。
+
 ## 尚未處理
 
 - raidbots 的 `DUNGEON_TW_MAP` 還留 14 筆暴雪 Journal 沒有對應條目的
   raidbots 自訂標籤（把 Mechagon 拆成工坊／廢料場、DOTI 與 Tazavesh 的分段等）。
 - `wowhead-dual-language-title.user.js` 仍完全獨立，沒有共用 helper。
+- archon 與 bloodmallet 尚未像 raidbots 那樣實地驗證過。
 
 ## 慣例
 
