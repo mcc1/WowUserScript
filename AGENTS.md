@@ -132,6 +132,41 @@ new WowheadTwHelper({ onScan, onUrlChange })
 `translatedNodeText` 是 `WeakMap<TextNode, string>` 快取；URL 變更時**必須**重建
 （`translatedNodeText = new WeakMap()`），否則 SPA 換頁後舊節點被誤判為已翻譯。
 
+### 能從網址算出來的東西，不要等 DOM
+
+預設的做法是被動的：等站方把英文寫進 DOM，我們掃到再翻。這在站方每次都會更新
+DOM 時沒問題，但站方一旦沒更新，被動模式會產生**比原生更糟的結果**。
+
+實際事故：archon 用篩選列的下拉選單切換職業，網址已經是
+`/wow/builds/preservation/evoker/`，畫面上的職業、專精、標題卻全都停在
+「秘法 法師」。原生站不會這樣，停用腳本就正常，但查不出 React 為什麼不重寫那些
+節點 —— 沒有拋任何例外（console 乾淨）、`translatedNodeText` 每次 URL 變更都重建、
+改用麵包屑連結導航連續三次都正確。react-select 的選單只吃可信事件，自動化打不開，
+所以那個手勢重現不了。
+
+重點不在那個 bug 本身，而在它的形狀：
+
+> 原生使用者看到的是**過期的英文**，一眼就知道不對。
+> 我們的使用者看到的是**過期但完全合理的中文** ——
+> 「武器 戰士」底下配著治療者的 HPS 數據，沒有任何線索顯示這是錯的。
+
+被動翻譯把「站方更新失敗」轉成了「看起來正確的錯誤資訊」。這比漏翻嚴重得多。
+
+所以：**只要網址裡已經有的資訊，就從網址算，不要等 DOM。**
+
+```
+/wow/builds/<專精>/<職業>/<內容>/...        archon
+/chart/<職業>/<專精>/<類型>/<戰鬥風格>       bloodmallet
+```
+
+兩支腳本現在都這樣做（archon 的 `getUrlSpecAndClass()`、bloodmallet 的
+`getChartPathParts()`）。這類同步要排在翻譯**之後**，網址算出來的值優先。
+
+一個必須注意的邊界：選單裡列的是**所有**選項，不是目前這個。archon 的麵包屑專精
+選單和標題用同一個 `span.do-not-change-color-on-hover`，無差別覆寫會把 13 個專精
+全部變成同一個。用 `closest()` 排除選單容器，並要求文字是「專精 職業」的組合
+（選單項目是單字，沒有空格）。
+
 ### 生成檔的介面
 
 `libs/game-names-tw.js` 掛在 `window.WowGameNamesTw`：
