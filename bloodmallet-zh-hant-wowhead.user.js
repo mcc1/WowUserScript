@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         Bloodmallet Traditional Chinese Wowhead
 // @namespace    https://bloodmallet.com/
-// @version      0.5.3
+// @version      0.7.0
 // @description  Add zh-hant mode, switch item links/names to the zh-hant Wowhead locale, and translate class/spec labels.
 // @author       mcc
 // @match        https://bloodmallet.com/*
 // @match        http://bloodmallet.com/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.5.5
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.6.0
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=1
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/bloodmallet-zh-hant-wowhead.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/bloodmallet-zh-hant-wowhead.user.js
 // @run-at       document-start
@@ -24,88 +25,34 @@
   const KEY_PREFIX = 'navbar_';
   const KEY_SUFFIX = '_selector';
 
-  const CLASS_TW_MAP = Object.freeze({
-    death_knight: '死亡騎士',
-    demon_hunter: '惡魔獵人',
-    druid: '德魯伊',
-    evoker: '喚能師',
-    hunter: '獵人',
-    mage: '法師',
-    monk: '武僧',
-    paladin: '聖騎士',
-    priest: '牧師',
-    rogue: '盜賊',
-    shaman: '薩滿',
-    warlock: '術士',
-    warrior: '戰士',
-  });
 
-  const SPEC_TW_MAP = Object.freeze({
-    affliction: '痛苦',
-    arcane: '秘法',
-    arms: '武器',
-    assassination: '刺殺',
-    augmentation: '強化',
-    balance: '平衡',
-    beast_mastery: '野獸控制',
-    blood: '血魄',
-    brewmaster: '釀酒',
-    demonology: '惡魔學識',
-    destruction: '毀滅',
-    devastation: '破滅',
-    devourer: '噬滅',
-    discipline: '戒律',
-    elemental: '元素',
-    enhancement: '增強',
-    feral: '野性戰鬥',
-    fire: '火焰',
-    frost: '冰霜',
-    fury: '狂怒',
-    guardian: '守護者',
-    havoc: '災虐',
-    holy: '神聖',
-    marksmanship: '射擊',
-    mistweaver: '禦霧',
-    outlaw: '暴徒',
-    preservation: '護存',
-    protection: '防護',
-    restoration: '恢復',
-    retribution: '懲戒',
-    shadow: '暗影',
-    subtlety: '敏銳',
-    survival: '生存',
-    unholy: '穢邪',
-    vengeance: '復仇',
-    windwalker: '御風',
-  });
 
-  const RACE_TW_MAP = Object.freeze({
-    human: '人類',
-    dwarf: '矮人',
-    night_elf: '夜精靈',
-    gnome: '地精',
-    draenei: '德萊尼',
-    worgen: '狼人',
-    pandaren: '熊貓人',
-    dracthyr: '龍希爾',
-    orc: '獸人',
-    undead: '不死族',
-    tauren: '牛頭人',
-    troll: '食人妖',
-    blood_elf: '血精靈',
-    goblin: '哥布林',
-    nightborne: '夜裔精靈',
-    highmountain_tauren: '高嶺牛頭人',
-    void_elf: '虛無精靈',
-    lightforged_draenei: '光鑄德萊尼',
-    zandalari_troll: '贊達拉食人妖',
-    kul_tiran: '庫爾提拉斯人',
-    dark_iron_dwarf: '黑鐵矮人',
-    vulpera: '狐狸人',
-    maghar_orc: '瑪格漢獸人',
-    mechagnome: '機械地精',
-    earthen: '土靈',
-  });
+
+  // 職業／專精／種族的譯名不手寫，一律取自 libs/game-names-tw.js
+  // （暴雪 client DB2 的官方 zhTW）。該檔尚未產生時安全降級為查不到。
+  function gameNames() {
+    return typeof window !== 'undefined' ? window.WowGameNamesTw : null;
+  }
+
+  function lookupGameUnit(value) {
+    const table = gameNames();
+    if (!table || typeof table.lookupUnit !== 'function' || !value) return null;
+    try {
+      return table.lookupUnit(value);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /** bloodmallet 以 snake_case 的職業代號當 CSS class，需要官方英文名清單來比對 */
+  function wowClassSlugs() {
+    const table = gameNames();
+    const list = table && table.UNIT_LISTS ? table.UNIT_LISTS.classes : null;
+    if (!Array.isArray(list)) return [];
+    return list.map(function (name) {
+      return name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    });
+  }
 
   const FIGHT_STYLE_TW_MAP = Object.freeze({
     patchwerk: '帕奇維克',
@@ -167,8 +114,7 @@
   }
 
   function translateClassOrSpec(value) {
-    const key = normalizeKey(value);
-    return CLASS_TW_MAP[key] || SPEC_TW_MAP[key] || null;
+    return lookupGameUnit(value);
   }
 
   function getPathClassAndSpec() {
@@ -188,8 +134,8 @@
 
   function translateClassAndSpecLabels() {
     const { wowClass, wowSpec } = getPathClassAndSpec();
-    const classTw = CLASS_TW_MAP[normalizeKey(wowClass)] || null;
-    const specTw = SPEC_TW_MAP[normalizeKey(wowSpec)] || null;
+    const classTw = lookupGameUnit(wowClass);
+    const specTw = lookupGameUnit(wowSpec);
 
     if (classTw) {
       setElementTextById('navbar_wow_class_selection', classTw);
@@ -215,8 +161,7 @@
     // 1. 翻譯所有欄位值（Class, Spec, Race, Fight Style 等）
     const raceEl = document.getElementById('c_race');
     if (raceEl) {
-      const key = normalizeKey(raceEl.textContent);
-      const twRace = RACE_TW_MAP[key];
+      const twRace = lookupGameUnit(raceEl.textContent);
       if (twRace) raceEl.textContent = twRace;
     }
 
@@ -229,15 +174,13 @@
 
     const classEl = document.getElementById('c_class');
     if (classEl) {
-      const key = normalizeKey(classEl.textContent);
-      const twClass = CLASS_TW_MAP[key];
+      const twClass = lookupGameUnit(classEl.textContent);
       if (twClass) classEl.textContent = twClass;
     }
 
     const specEl = document.getElementById('c_spec');
     if (specEl) {
-      const key = normalizeKey(specEl.textContent);
-      const twSpec = SPEC_TW_MAP[key];
+      const twSpec = lookupGameUnit(specEl.textContent);
       if (twSpec) specEl.textContent = twSpec;
     }
 
@@ -289,16 +232,19 @@
   }
 
   function isTwModeEnabled() {
-    const val = window.localStorage.getItem(TW_MODE_STORAGE_KEY);
-    return val === null || val === TW_MODE_VALUE || val === 'true';
+    try {
+      const val = window.localStorage.getItem(TW_MODE_STORAGE_KEY);
+      return val === null || val === TW_MODE_VALUE || val === 'true';
+    } catch (_) {
+      // 瀏覽器封鎖 storage 時視為預設啟用，不讓整支腳本中止
+      return true;
+    }
   }
 
   function setTwModeEnabled(enabled) {
-    if (enabled) {
-      window.localStorage.setItem(TW_MODE_STORAGE_KEY, TW_MODE_VALUE);
-      return;
-    }
-    window.localStorage.setItem(TW_MODE_STORAGE_KEY, 'false');
+    try {
+      window.localStorage.setItem(TW_MODE_STORAGE_KEY, enabled ? TW_MODE_VALUE : 'false');
+    } catch (_) {}
   }
 
   function injectZhHantOption() {
@@ -345,7 +291,7 @@
 
   function detectWowClassFromElement(element) {
     const className = element.className || '';
-    for (const wowClass of Object.keys(CLASS_TW_MAP)) {
+    for (const wowClass of wowClassSlugs()) {
       if (className.includes(`translate_${wowClass}`) || className.includes(`${wowClass}-`)) {
         return wowClass;
       }
@@ -375,7 +321,7 @@
     const specButtons = table.querySelectorAll('a.spec-btn');
     for (const btn of specButtons) {
       const { wowSpec } = parseChartPathFromHref(btn.getAttribute('href') || '');
-      const translated = SPEC_TW_MAP[wowSpec] || null;
+      const translated = lookupGameUnit(wowSpec);
       if (translated && btn.textContent !== translated) {
         btn.textContent = translated;
       }
@@ -384,7 +330,7 @@
     const classHeaders = table.querySelectorAll('.wow-class-header-content');
     for (const header of classHeaders) {
       const wowClass = detectWowClassFromElement(header);
-      const translated = CLASS_TW_MAP[wowClass] || null;
+      const translated = lookupGameUnit(wowClass);
       if (translated && header.textContent !== translated) {
         header.textContent = translated;
       }
@@ -548,7 +494,11 @@
   }
 
   function start() {
-    forceTwWowheadEnvironment();
+    // 只有在 zh-hant 模式開啟時才覆寫 Wowhead 全域語系，
+    // 否則使用者從設定頁切回其他語言仍會被強制看到繁中 tooltip。
+    if (isTwModeEnabled()) {
+      forceTwWowheadEnvironment();
+    }
 
     if (isSettingsPage) {
       injectZhHantOption();
