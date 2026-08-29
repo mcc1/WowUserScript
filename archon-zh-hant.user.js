@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Archon.gg Traditional Chinese
 // @namespace    https://www.archon.gg/
-// @version      0.7.0
+// @version      0.7.1
 // @description  Translate archon.gg WoW build pages to Traditional Chinese.
 // @author       mcc
 // @match        https://www.archon.gg/wow/*
@@ -162,7 +162,7 @@
     'Close Ad': '關閉廣告',
 
     // 遊戲版本選單
-    'WoW - Midnight': 'WoW - 午夜',
+    'WoW - Midnight': 'WoW - 至暗之夜',
     'WoW - MoP': 'WoW - 潘達利亞之霧',
     'WoW - SoD': 'WoW - 發現賽季',
     'WoW - Fresh': 'WoW - 全新伺服器',
@@ -303,7 +303,7 @@
     return joinTw(range, CONTENT_TW[match[4]], ROLE_TW[match[1]], RANKING_SECTION_TW[match[2]]);
   }
 
-  /** 「Midnight DPS Rankings and Mythic+ Tier List」→「午夜 DPS 排行榜與傳奇鑰石強度排行」 */
+  /** 「Midnight DPS Rankings and Mythic+ Tier List」→「至暗之夜 DPS 排行榜與傳奇鑰石強度排行」 */
   function translatePageTitle(text) {
     const match = text.match(PAGE_TITLE_RE);
     if (!match) return null;
