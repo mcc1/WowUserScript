@@ -326,16 +326,30 @@
      * @returns {HTMLAnchorElement|null}
      */
     findNearestWowheadIconLink(textElement) {
+      // 1. 優先透過 closest 判定是否位於明確的單一裝備卡片/行中（支援帶插槽寶石的裝備）
+      const itemCard =
+        typeof textElement.closest === 'function'
+          ? textElement.closest(
+              '[data-testid^="droptimizer-item-"], [data-testid^="item-option-"], .DroptimizerRow, .ItemOption, [class*="droptimizerItem"], [class*="DroptimizerRow"]'
+            )
+          : null;
+
+      if (itemCard) {
+        const links = itemCard.querySelectorAll(WOWHEAD_ITEM_OR_SPELL_LINK);
+        for (const link of links) {
+          if (!(link instanceof HTMLAnchorElement)) continue;
+          if (link.contains(textElement) || textElement.contains(link)) continue;
+          if (link.dataset.twWowheadLinked === 'true') continue;
+          // 單一卡片內的第一個有效 Wowhead 連結必為裝備本體（後續為鑲嵌的插槽寶石）
+          return link;
+        }
+      }
+
+      // 2. 常規向上回溯祖先（用於無特定 class 的自訂表格/圖表視圖）
       let ancestor = textElement;
       for (let depth = 0; depth < 5 && ancestor; depth += 1) {
         ancestor = ancestor.parentElement;
         if (!(ancestor instanceof Element)) continue;
-
-        const isItemCard =
-          (typeof ancestor.matches === 'function' &&
-            ancestor.matches('[data-testid^="droptimizer-item-"], [data-testid^="item-option-"]')) ||
-          ancestor.classList.contains('DroptimizerRow') ||
-          ancestor.classList.contains('ItemOption');
 
         const links = ancestor.querySelectorAll(WOWHEAD_ITEM_OR_SPELL_LINK);
         const mainLinks = [];
@@ -349,12 +363,7 @@
         // 如果這個祖先節點內還沒有包含圖示，繼續往上層祖先搜尋
         if (mainLinks.length === 0) continue;
 
-        // 如果是已知的單一裝備卡片（可能附帶 1~3 顆插槽寶石），第一個連結永遠是裝備本體！
-        if (isItemCard) {
-          return mainLinks[0];
-        }
-
-        // 如果不是單一卡片，且祖先節點內包含多於 1 個裝備圖示（如好運符/地城總覽清單行），
+        // 如果這個祖先節點內包含多於 1 個裝備圖示（如好運符/地城總覽清單行），
         // 該列文字為地城/首領名稱，絕對不可關聯！直接返回 null
         if (mainLinks.length > 1) return null;
 
