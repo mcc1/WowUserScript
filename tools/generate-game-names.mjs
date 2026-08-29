@@ -160,8 +160,17 @@ function deriveAliases(englishName) {
   };
 
   variants(base);
+
+  // 「逗號 + 稱號」的短寫法：Sikran, Captain of the Sureki -> Sikran
   const comma = base.indexOf(',');
   if (comma > 0) variants(base.slice(0, comma));
+
+  // 「本名 + the + 稱號」的短寫法：Nek'zali the Soulcoiler -> Nek'zali
+  // 刻意收得很緊（本名必須是單一 token、稱號不含 of），否則像
+  // 「Trial of the Crusader」會被剝成「Trial」這種會誤傷的別名。
+  const epithet = base.match(/^(\S+)\s+the\s+[A-Za-z'\- ]+$/i);
+  if (epithet && epithet[1].length >= 4) variants(epithet[1]);
+
   return out;
 }
 
@@ -253,9 +262,25 @@ function renderModule(nameEntries, unitEntries) {
       "    return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');",
       '  }',
       '',
+      '  // 頁面上的寫法可能與官方名有出入，查不到時依序退而求其次。',
+      '  // 這是查詢端的正規化，不是另一本字典。',
+      '  function variantsOf(englishName) {',
+      '    const raw = String(englishName || \'\').trim();',
+      '    const out = [raw];',
+      '    // 去掉尾端括號補述：Rasha\'nan (The Dawnbreaker) -> Rasha\'nan',
+      '    out.push(raw.replace(/\\s*\\([^()]*\\)\\s*$/, \'\'));',
+      '    // & 與 and 互換：Vexie & the Geargrinders -> Vexie and the Geargrinders',
+      '    out.push(raw.replace(/\\s*&\\s*/g, \' and \'));',
+      '    out.push(raw.replace(/\\s+and\\s+/gi, \' & \'));',
+      '    return out;',
+      '  }',
+      '',
       '  function get(table, englishName) {',
-      '    const key = normalize(englishName);',
-      '    return key && Object.prototype.hasOwnProperty.call(table, key) ? table[key] : null;',
+      '    for (const variant of variantsOf(englishName)) {',
+      '      const key = normalize(variant);',
+      '      if (key && Object.prototype.hasOwnProperty.call(table, key)) return table[key];',
+      '    }',
+      '    return null;',
       '  }',
       '',
       '  /**',

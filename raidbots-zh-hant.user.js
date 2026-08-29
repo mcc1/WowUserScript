@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.6.5
+// @version      1.7.0
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
 // @match        https://raidbots.com/*
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.6.1
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=1
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=2
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/raidbots-zh-hant.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/raidbots-zh-hant.user.js
 // @run-at       document-start
@@ -177,9 +177,6 @@
   // 以下只保留 DB2 沒有對應條目的 raidbots 自訂標籤（例如把 Mechagon 拆成
   // 工坊／廢料場、DOTI 與 Tazavesh 的分段）。新增副本請重跑產生器，不要加在這裡。
   const DUNGEON_TW_MAP = Object.freeze({
-    // World of Warcraft: Midnight (12.0 / 12.1) - Raids (午夜團隊副本)
-    march_on_queldanas: '進軍奎爾達納斯',
-
     // The War Within - Season 2 Dungeons (第 2 季地城)
     the_floodgate: '水閘行動',
     operation_mechagon_workshop: '機械岡行動 - 工坊',
@@ -191,7 +188,6 @@
     mycomancers_cavern: '菌術師洞穴',
 
     // Classic / Previous Expansions Dungeons & Raids
-    uldaman_legacy_of_tyr: '奧達曼：提爾的遺產',
     dotis_galakronds_fall: '永恆黎明：葛拉克朗殞命之地',
     dotis_murozonds_rise: '永恆黎明：姆多茲諾崛起',
     galakronds_fall: '葛拉克朗殞命之地',
@@ -475,11 +471,9 @@
     '- Normal Vault': '- 普通寶庫',
     '- LFR Vault': '- 團隊搜尋器寶庫',
     '1 variation hidden': '1 個變體已隱藏',
-    'Midnight Raids': '午夜團隊副本',
-    'Midnight Dungeons': '午夜地城',
+    'Midnight Raids': '至暗之夜團隊副本',
+    'Midnight Dungeons': '至暗之夜地城',
     'Nymrissa': '奈姆莉莎',
-    'High Shaman Talan': '高階薩滿塔蘭',
-    'Tidebound Colossus': '浪縛巨像',
     'Season 1 Raids': '第 1 季團隊副本',
     'Season 2 Raids': '第 2 季團隊副本',
     'Season 3 Raids': '第 3 季團隊副本',
@@ -497,7 +491,7 @@
     'Season 3 Normal Dungeons': '第 3 季普通地下城',
     'Normal Dungeons': '普通地下城',
     'World Bosses': '世界首領',
-    'World Bosses (Midnight)': '世界首領（午夜）',
+    'World Bosses (Midnight)': '世界首領（至暗之夜）',
     'World Bosses (The War Within)': '世界首領（地心之戰）',
     'World Bosses (Season 1)': '第 1 季世界首領',
     'World Bosses (Season 2)': '第 2 季世界首領',
@@ -530,33 +524,23 @@
     'PVP Season 2 (Honor)': '第 2 季 PVP（榮譽）',
     'PVP Season 3 (Honor)': '第 3 季 PVP（榮譽）',
 
-    // The Venomous Abyss Bosses (劇毒深淵首領 - 台服官方繁中)
-    'Nek\'zali': '尼札利',
+    // DB2 沒有收錄（新內容未進表，或 raidbots 用了不同的英文名）
     'Vexhul and Ithraz': '薇克修爾與伊斯拉茲',
     'Vexhul': '薇克修爾',
     'Ithraz': '伊斯拉茲',
-    'Vashnik': '伐許尼克',
-
-    // Midnight Season 2 Dungeons & Bosses (午夜第 2 季地城與首領 - 台服官方繁中)
     'High Evolutionist': '高階進化者',
+    'Big Dahlia': '大達莉亞',
 
-    // Liberation of Undermine Bosses (解放幽坑城首領)
-    'Vexie & the Geargrinders': '薇克希和齒輪幫',
+    // DB2 只有全名 Chrome King Gallywix，沒有這個短寫法
     'Gallywix': '加里維克斯',
 
-    // Season 2 Dungeons & Bosses (第 2 季地城與首領)
-    'Big Dahlia': '大達莉亞',
-    'Baron Braunpyre': '布朗派爾男爵',
-    'Stormguard Gorrena': '風暴守衛戈雷納',
+    // raidbots 自己把機械岡拆成兩段，DB2 只有整座副本
     'Operation: Mechagon - Workshop': '機械岡行動 - 工坊',
     'Operation Mechagon - Workshop': '機械岡行動 - 工坊',
     'Operation: Mechagon - Junkyard': '機械岡行動 - 廢料場',
     'Operation Mechagon - Junkyard': '機械岡行動 - 廢料場',
-    'Tussie Tonks': '狂歡坦克',
 
-    // Season 1 Dungeons & Bosses (第 1 季地城與首領)
-    'E.D.N.A.': '愛德娜',
-    'Rasha\'nan (The Dawnbreaker)': '羅夏南',
+    // ────────────────────────────────────────────────────────────────────
     'Include Off-Spec Items': '包含非主專精物品',
     'Catalyst': '催化',
     'Great Vault Item': '大秘寶庫物品',
