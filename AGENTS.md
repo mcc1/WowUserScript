@@ -185,6 +185,55 @@ node tools/generate-game-names.mjs --self-test   # 產生器模板
 2. 新增任何疊在圖示上的短標籤時，要一併加進 `registerNonItemNames`。
    函式庫本身已擋掉「5 字元以內的全大寫字串」（真正的裝備名一定含小寫字母）。
 
+## bloodmallet 的陷阱（踩過一次，別再踩）
+
+站方在 2026-08 前後換掉了前端：`window.BmChartData` 不再存在，改成
+`window.bmUtils`（`bm-utils.js`）加上 `bm-charts.js`，圖表是 `.bm-bar-chart` 底下
+一堆 `.bm-row` 的 div，不是 SVG。舊腳本裡那段等 `BmChartData` 出現的 prototype
+patch 因此空轉 12 秒後放棄，整段是死碼（v0.8.0 已移除）。
+
+### 1. 站方語言表對未登記的值是「原樣穿透」，不是 fallback
+
+`bmUtils.languageMap` 只有 `zh-hans → cn_CN`，沒有 `zh-hant`；
+`bmUtils.wowheadSubdomains` 也沒有 `zh_TW`。而 `detectUserLanguage()` 查不到時
+**不會**退回 `en_US`，是把原值直接往下傳：
+
+```
+'zh-hant' → 'zh-hant' → wowheadSubdomains['zh-hant'] === undefined → 整站英文
+```
+
+所以語言選單注入的 `zh-hant` 一旦真的送到伺服器，之後每次載入都是英文 ——
+這不是我們的覆蓋層失效，是站方查表失敗。修法是把 zh-hant 登記進那兩張表
+（`registerZhHantLanguageWhenReady()`）。
+
+**必須在 IIFE 頂層呼叫，不能放進 `start()`。** setter 攔截要趕在 `bm-utils.js`
+賦值之前；等到 DOMContentLoaded，`bmUtils` 早就掛好了，攔截點已經過去。
+
+登記成 `cn_CN` 而不是 `zh_TW` 是刻意的：資料與品名仍走站方既有的 cn 管線，我們
+在其上用 Wowhead zhTW 重寫，維持原本就會動的行為，只是讓 zh-hant 漏出去時不再
+炸成英文。若日後確認站方資料支援 zh_TW，改 `BM_LANGUAGE_FALLBACK` 一個常數即可。
+
+### 2. `data-bm-tooltip-text` 是屬性裡的 HTML 快照，widget 改不到
+
+長條圖每一列的品名有兩份：
+
+| 位置 | 形式 | Wowhead widget |
+|---|---|---|
+| `.bm-key` | `<a data-wh-rename-link>` 的文字節點 | 會改寫成 zhTW ✅ |
+| `.bm-bar` | `data-bm-tooltip-text` 屬性裡的一段 HTML 字串 | 改不到 ❌ |
+
+於是左邊品名是繁中、bar 的 tooltip 標題卻永遠停在站台語言（cn_CN → 简中）。
+**這不是漏翻字典**，是屬性裡的快照沒人更新 —— 同一列正確的品名就在旁邊，回填即可，
+不需要查表也不需要再打一次 Wowhead。
+
+站方 `bm-tooltips.js` 的 `create_tooltip()` 是在 mouseover 當下才
+`element.getAttribute(BmTooltipAttribute.TEXT)`、mouseleave 就把節點丟掉，
+registration 階段只指派 id、不快取 HTML —— 所以改屬性下次 hover 就生效，
+這是正確的介入點。
+
+凡是站方把譯名序列化進屬性的地方都有同樣問題。看到 `data-*` 裡塞 HTML 就要警覺：
+Wowhead widget 只碰文字節點。
+
 ## 已定案的行為，不要「修正」回去
 
 - **catalyst（CAT）那一列顯示的是原始掉落裝備名，不是轉化後的套裝件名。**
@@ -196,7 +245,9 @@ node tools/generate-game-names.mjs --self-test   # 產生器模板
 - raidbots 的 `DUNGEON_TW_MAP` 還留 14 筆暴雪 Journal 沒有對應條目的
   raidbots 自訂標籤（把 Mechagon 拆成工坊／廢料場、DOTI 與 Tazavesh 的分段等）。
 - `wowhead-dual-language-title.user.js` 仍完全獨立，沒有共用 helper。
-- archon 與 bloodmallet 尚未像 raidbots 那樣實地驗證過。
+- archon 尚未像 raidbots 那樣實地驗證過。
+- bloodmallet 已於瀏覽器實地驗證（2026-08-29，v0.8.0）：語言表註冊、bar tooltip
+  回填、`/index.html` 首頁翻譯三項都確認生效。
 
 ## 慣例
 
