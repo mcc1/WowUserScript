@@ -309,7 +309,6 @@
             }
           }
           if (
-            current.classList.contains('DroptimizerRow') ||
             current.classList.contains('SummaryRow') ||
             current.classList.contains('BonusRollRow')
           ) {

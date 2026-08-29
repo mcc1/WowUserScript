@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.1.1
+// @version      1.2.0
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
 // @match        https://raidbots.com/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.1.1
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.2.0
 // @run-at       document-start
 // @grant        none
 // @license      MIT
@@ -729,6 +729,15 @@
     'DPS compared to your current gear.': '與目前裝備相比的 DPS。',
     'Highlighted icons indicate 0.05% or better DPS increase.':
       '醒目標示的圖示代表 DPS 提升 0.05% 以上。',
+    'Heroic Vault': '英雄寶庫',
+    'Mythic Vault': '傳奇寶庫',
+    'Normal Vault': '普通寶庫',
+    'LFR Vault': '團隊搜尋器寶庫',
+    '- Heroic Vault': '- 英雄寶庫',
+    '- Mythic Vault': '- 傳奇寶庫',
+    '- Normal Vault': '- 普通寶庫',
+    '- LFR Vault': '- 團隊搜尋器寶庫',
+    '1 variation hidden': '1 個變體已隱藏',
     'Midnight Raids': '午夜團隊副本',
     'Midnight Dungeons': '午夜地城',
     'The Tidebound Grotto': '浪縛石窟',
@@ -1289,6 +1298,20 @@
       const prefix = summaryHeadingMatch[1].trim();
       const prefixTw = EXACT_TW[prefix] || EXACT_TW_CI[prefix.toLowerCase()] || prefix;
       return replaceTrimmed(text, trimmed, `${prefixTw} 總覽`);
+    }
+
+    const leadingDashMatch = trimmed.match(/^-\s*(.+)$/);
+    if (leadingDashMatch) {
+      const rest = leadingDashMatch[1].trim();
+      const restTw = translateSuffix(rest) || EXACT_TW[rest] || EXACT_TW_CI[rest.toLowerCase()] || translateDungeon(rest);
+      if (restTw && restTw !== rest) {
+        return replaceTrimmed(text, trimmed, `- ${restTw}`);
+      }
+    }
+
+    const suffixDirect = translateSuffix(trimmed);
+    if (suffixDirect && suffixDirect !== trimmed) {
+      return replaceTrimmed(text, trimmed, suffixDirect);
     }
 
     const titleMatch = trimmed.match(/^Top Gear - (.+?) - ([\d,]+\s+DPS) - Raidbots$/);
