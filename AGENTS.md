@@ -89,6 +89,36 @@ node tools/generate-game-names.mjs --self-test
 
 各站腳本的翻譯邏輯一律掛在 `onScan` / `onUrlChange` callback 上，**不要**自己再開 observer。
 
+#### 站方重繪會把譯文換回去，而 debounce 的長度就是閃爍的長度
+
+`queueRoot()` 有 160ms 的 debounce，用來把 SPA 換頁那種一次幾百筆的變動批次化。
+但站方的小重繪（archon 在 toolbar hover 時會把整條麵包屑換回英文）也會吃到這
+160ms —— 使用者看到的就是一次明顯的英文閃爍，而且滑一次閃一次。
+
+`syncSmallMutations`（預設關閉）讓小批變動同步處理。MutationObserver 的 callback
+在瀏覽器繪製前就跑完，所以英文那一幀根本不會被畫出來。
+
+**門檻看的是「這批帶進來多少 DOM」，不是變動的型別。** 實測 archon：
+
+| 情境 | addedWeight |
+|---|---|
+| toolbar hover 重繪 | ~10 |
+| 路由切換主批次 | 961（807 筆記錄） |
+| 路由切換後續小批 | 1 |
+
+50 這個門檻把兩者分得很開。用型別分辨會完全失效 —— 見下。
+
+#### 量測陷阱：只收一種 mutation type，會得出相反的結論
+
+第一次查這個閃爍時，記錄器裡寫了 `if (m.type === 'characterData')`，childList 被
+自己過濾掉。結果看到的全是「英文 → 中文」（我們自己的寫入），於是結論成「站方是
+就地改文字」，照這個結論寫出來的快車道條件是「沒有結構變動才同步」——**正好把唯一
+需要它的情況排除掉，一次都沒觸發**。
+
+archon 是**換掉節點**，不是改文字。查這類問題時 `childList`、`characterData`、
+`attributes` 三種要一起收，而且要記 `characterDataOldValue`，否則分不出哪一筆是
+站方寫的、哪一筆是自己寫的。
+
 #### 為什麼有些連結不能直接掛 `data-wh-rename-link`
 
 Wowhead widget 改名的方式是**把整個 `innerHTML` 換成 `<span>名稱</span>`**。連結裡如果
