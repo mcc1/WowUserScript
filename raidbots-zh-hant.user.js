@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      0.5.0
+// @version      1.0.0
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
 // @match        https://raidbots.com/*
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js
 // @run-at       document-start
 // @grant        none
 // @license      MIT
@@ -266,21 +267,146 @@
   });
 
   const DUNGEON_TW_MAP = Object.freeze({
+    // World of Warcraft: Midnight (12.0 / 12.1) - Raids (午夜團隊副本)
+    the_venomous_abyss: '劇毒深淵',
+    venomous_abyss: '劇毒深淵',
+    the_voidspire: '虛無之尖',
+    march_on_queldanas: '進軍奎爾達納斯',
+    the_dreamrift: '夢境裂隙',
+
+    // World of Warcraft: Midnight (12.1 Season 2) - Dungeons (午夜第 2 季地城)
+    altar_of_fangs: '毒牙祭壇',
+    the_altar_of_fangs: '毒牙祭壇',
+    murder_row: '兇殺路',
+    den_of_nalorakk: '納羅拉克之穴',
+    the_blinding_vale: '盲目谷地',
+    voidscar_arena: '虛痕競技場',
+    kings_rest: '諸王之眠',
+    the_kings_rest: '諸王之眠',
+    temple_of_sethraliss: '瑟沙利斯神廟',
+    the_temple_of_sethraliss: '瑟沙利斯神廟',
+    ruby_life_pools: '晶紅生命之池',
+
+    // World of Warcraft: Midnight (12.0 Season 1) - Dungeons (午夜第 1 季地城)
+    windrunner_spire: '風行者之塔',
+    maisara_caverns: '麥薩拉洞穴',
+    nexus_point_xenas: '結點瑟納斯',
+    magisters_terrace: '博學者殿堂',
     pit_of_saron: '薩倫之淵',
     skyreach: '擎天峰',
     seat_of_the_triumvirate: '三傑議會之座',
     algethar_academy: '阿爾蓋薩學院',
-    windrunner_spire: '風行者塔',
-    maisara_caverns: '梅薩拉洞穴',
-    nexus_point_xenas: '奧核點瑟納斯',
-    magisters_terrace: '博學者殿堂',
-    den_of_nalorakk: '納羅拉克之穴',
-    the_blinding_vale: '盲目谷地',
-    murder_row: '兇殺路',
-    voidscar_arena: '虛無之痕競技場',
-    the_voidspire: '虛無之尖',
-    march_on_queldanas: '進軍奎爾達納斯',
-    the_dreamrift: '夢境裂隙',
+
+    // The War Within - Raids (地心之戰團隊副本)
+    liberation_of_undermine: '解放幽坑城',
+    the_liberation_of_undermine: '解放幽坑城',
+    nerub_ar_palace: '奈幽巴宮殿',
+    nerubar_palace: '奈幽巴宮殿',
+    manaforge_omega: '法力靈爐歐米茄',
+    the_manaforge_omega: '法力靈爐歐米茄',
+
+    // The War Within - Season 2 Dungeons (第 2 季地城)
+    operation_floodgate: '水閘行動',
+    the_floodgate: '水閘行動',
+    cinderbrew_meadery: '燼釀酒莊',
+    the_cinderbrew_meadery: '燼釀酒莊',
+    the_rookery: '培育所',
+    rookery: '培育所',
+    darkflame_cleft: '暗焰裂縫',
+    the_darkflame_cleft: '暗焰裂縫',
+    priory_of_the_sacred_flame: '聖焰隱修院',
+    the_priory_of_the_sacred_flame: '聖焰隱修院',
+    the_motherlode: '晶喜鎮',
+    'the_motherlode!!': '晶喜鎮',
+    motherlode: '晶喜鎮',
+    operation_mechagon_workshop: '機械岡行動 - 工坊',
+    operation_mechagon_junkyard: '機械岡行動 - 廢料場',
+    operation_mechagon: '機械岡行動',
+    mechagon_workshop: '機械岡行動 - 工坊',
+    mechagon_junkyard: '機械岡行動 - 廢料場',
+    mechagon: '機械岡行動',
+    theater_of_pain: '苦痛劇場',
+    the_theater_of_pain: '苦痛劇場',
+
+    // The War Within - Season 1 Dungeons (第 1 季地城)
+    ara_kara_city_of_echoes: '回音之城亞拉卡拉',
+    ara_kara: '回音之城亞拉卡拉',
+    arakara: '回音之城亞拉卡拉',
+    city_of_threads: '蛛絲之城',
+    the_stonevault: '石庫',
+    stonevault: '石庫',
+    the_dawnbreaker: '破曉者號',
+    dawnbreaker: '破曉者號',
+    mists_of_tirna_scithe: '特那希迷霧',
+    the_necrotic_wake: '瘟疫之歿',
+    necrotic_wake: '瘟疫之歿',
+    siege_of_boralus: '波拉勒斯圍城戰',
+    grim_batol: '格瑞姆巴托',
+
+    // The War Within - Delves (探究)
+    earthcrawl_mines: '地掘礦坑',
+    fungal_folly: '菌菇愚行',
+    kriegvals_rest: '克里格瓦之眠',
+    nightfall_sanctum: '暮秋聖所',
+    skittering_breach: '飛掠裂隙',
+    the_dread_pit: '恐懼之坑',
+    the_sinkhole: '沉沒天坑',
+    the_spiral_weave: '螺旋編織',
+    the_underkeep: '地下堡壘',
+    the_waterworks: '供水廠',
+    tak_rethan_abyss: '塔克芮森深淵',
+    mycomancers_cavern: '菌術師洞穴',
+    zekvirs_lair: '澤克維爾巢穴',
+    excavation_site_9: '第 9 號挖掘場',
+    demolition_dome: '爆破穹頂',
+    sidestreet_sluice: '側街水渠',
+
+    // Midnight - Delves & Dungeons (午夜探究與地城)
+    the_tidebound_grotto: '浪縛石窟',
+    tidebound_grotto: '浪縛石窟',
+
+    // Classic / Previous Expansions Dungeons & Raids
+    pit_of_saron: '薩倫之淵',
+    skyreach: '擎天峰',
+    seat_of_the_triumvirate: '三傑議會之座',
+    algethar_academy: '阿爾蓋薩學院',
+    nokhud_offensive: '諾庫德進攻據點',
+    the_nokhud_offensive: '諾庫德進攻據點',
+    brackenhide_hollow: '蕨皮谷',
+    halls_of_infusion: '灌注迴廊',
+    neltharus: '奈薩魯斯堡',
+    azure_vault: '蒼藍密庫',
+    the_azure_vault: '蒼藍密庫',
+    uldaman_legacy_of_tyr: '奧達曼：提爾的遺產',
+    dawn_of_the_infinite: '永恆黎明',
+    dotis_galakronds_fall: '永恆黎明：葛拉克朗殞命之地',
+    dotis_murozonds_rise: '永恆黎明：姆多茲諾崛起',
+    galakronds_fall: '葛拉克朗殞命之地',
+    murozonds_rise: '姆多茲諾崛起',
+    vault_of_the_incarnates: '洪荒化身巨龍牢獄',
+    aberrus_the_shadowed_crucible: '亞貝魯斯，暗影蓄爐',
+    amirdrassil_the_dreams_hope: '阿梅達希爾，夢境希望',
+    amirdrassil: '阿梅達希爾',
+    halls_of_atonement: '贖罪之殿',
+    sanguine_depths: '血紅深淵',
+    spires_of_ascension: '晉升之巔',
+    plaguefall: '瘟疫之臨',
+    de_other_side: '彼界境地',
+    tazavesh_the_veiled_market: '塔札維許，帷幕市集',
+    tazavesh_streets_of_wonder: '塔札維許：奇蹟街道',
+    tazavesh_soleahs_gambit: '塔札維許：索利亞的計謀',
+    castle_nathria: '納撒亞城',
+    sanctum_of_domination: '統御聖所',
+    sepulcher_of_the_first_ones: '首創者聖塚',
+    ataldazar: '阿塔達薩',
+    freehold: '自由港',
+    waycrest_manor: '威克雷斯莊園',
+    shrine_of_the_storm: '風暴聖壇',
+    temple_of_sethraliss: '瑟沙利斯神廟',
+    underrot: '幽腐深窟',
+    the_underrot: '幽腐深窟',
+    tol_dagor: '托達戈爾',
+    blackrock_depths: '黑石深淵',
   });
 
   const RACE_TW_MAP = Object.freeze({
@@ -584,19 +710,287 @@
     Region: '地區',
     Realm: '伺服器',
     Character: '角色',
+    // Droptimizer Sources & Seasons
+    'BONUS ROLL SUMMARY': '好運符總覽',
+    'Bonus Roll Summary': '好運符總覽',
+    'BONUS ROLL': '好運符',
+    'Bonus Roll': '好運符',
+    'Midnight Raids': '午夜團隊副本',
+    'Midnight Dungeons': '午夜地城',
+    'The Tidebound Grotto': '浪縛石窟',
+    'Tidebound Grotto': '浪縛石窟',
     'Season 1 Raids': '第 1 季團隊副本',
-    'World Bosses': '世界首領',
+    'Season 2 Raids': '第 2 季團隊副本',
+    'Season 3 Raids': '第 3 季團隊副本',
+    'The War Within Raids': '地心之戰團隊副本',
+    'The War Within Dungeons': '地心之戰地城',
+    'Season 1 Dungeons': '第 1 季地城',
+    'Season 2 Dungeons': '第 2 季地城',
+    'Season 3 Dungeons': '第 3 季地城',
+    'Season 1 Mythic+ Dungeons': '第 1 季傳奇鑰石地城',
+    'Season 2 Mythic+ Dungeons': '第 2 季傳奇鑰石地城',
+    'Season 3 Mythic+ Dungeons': '第 3 季傳奇鑰石地城',
     'Mythic+ Dungeons': '傳奇鑰石地城',
+    'Season 1 Normal Dungeons': '第 1 季普通地下城',
+    'Season 2 Normal Dungeons': '第 2 季普通地下城',
+    'Season 3 Normal Dungeons': '第 3 季普通地下城',
     'Normal Dungeons': '普通地下城',
+    'World Bosses': '世界首領',
+    'World Bosses (Midnight)': '世界首領（午夜）',
+    'World Bosses (The War Within)': '世界首領（地心之戰）',
+    'World Bosses (Season 1)': '第 1 季世界首領',
+    'World Bosses (Season 2)': '第 2 季世界首領',
+    'World Bosses (Season 3)': '第 3 季世界首領',
+    'Season 1': '第 1 季',
+    'Season 2': '第 2 季',
+    'Season 3': '第 3 季',
+    'The Coiled Isle': '盤蛇島',
+    'Coiled Isle': '盤蛇島',
+    'Curse of Ula\'tek': '烏拉泰克的詛咒',
     'Epic Profession Items': '史詩專業物品',
     'Rare Profession Items': '稀有專業物品',
     'PVP Profession Items': 'PVP 專業物品',
     'Catalyst Season 1': '第 1 季催化劑',
+    'Catalyst Season 2': '第 2 季催化劑',
+    'Catalyst Season 3': '第 3 季催化劑',
     'Delves Season 1': '第 1 季探索',
+    'Delves Season 2': '第 2 季探索',
+    'Delves Season 3': '第 3 季探索',
     'Prey Season 1': '第 1 季獵物',
+    'Prey Season 2': '第 2 季獵物',
+    'Prey Season 3': '第 3 季獵物',
     'PVP Season 1 (Conquest)': '第 1 季 PVP（征服）',
+    'PVP Season 2 (Conquest)': '第 2 季 PVP（征服）',
+    'PVP Season 3 (Conquest)': '第 3 季 PVP（征服）',
     'PVP Season 1 (Bloody Tokens)': '第 1 季 PVP（血腥代幣）',
+    'PVP Season 2 (Bloody Tokens)': '第 2 季 PVP（血腥代幣）',
+    'PVP Season 3 (Bloody Tokens)': '第 3 季 PVP（血腥代幣）',
     'PVP Season 1 (Honor)': '第 1 季 PVP（榮譽）',
+    'PVP Season 2 (Honor)': '第 2 季 PVP（榮譽）',
+    'PVP Season 3 (Honor)': '第 3 季 PVP（榮譽）',
+
+    // Midnight - Raids (午夜團隊副本)
+    'The Venomous Abyss': '劇毒深淵',
+    'Venomous Abyss': '劇毒深淵',
+    'The Voidspire': '虛無之尖',
+    'March on Quel\'Danas': '進軍奎爾達納斯',
+    'The Dreamrift': '夢境裂隙',
+
+    // The Venomous Abyss Bosses (劇毒深淵首領 - 台服官方繁中)
+    'Nek\'zali the Soulcoiler': '『纏魂者』尼札利',
+    'Nekzali the Soulcoiler': '『纏魂者』尼札利',
+    'Nek\'zali': '尼札利',
+    'The Twin Fangs': '雙生毒牙',
+    'Twin Fangs': '雙生毒牙',
+    'Vexhul and Ithraz': '薇克修爾與伊斯拉茲',
+    'Vexhul': '薇克修爾',
+    'Ithraz': '伊斯拉茲',
+    'Entombed Sentinels': '埋葬衛哨',
+    'Vashnik the Malignant': '『惡性之毒』伐許尼克',
+    'Vashnik': '伐許尼克',
+    'The Lost Explorers': '迷路的探險者',
+    'Lost Explorers': '迷路的探險者',
+    'Sszorak': '司佐拉',
+    'The Coiled Altar': '盤蛇祭壇',
+    'Coiled Altar': '盤蛇祭壇',
+    'Ula\'tek': '烏拉特克',
+    'Ulatek': '烏拉特克',
+
+    // Midnight Season 2 Dungeons & Bosses (午夜第 2 季地城與首領 - 台服官方繁中)
+    'Altar of Fangs': '毒牙祭壇',
+    'Rav\'i': '拉維',
+    'High Evolutionist': '高階進化者',
+    'Zul\'jan': '祖爾贊',
+
+    'Murder Row': '兇殺路',
+    'Den of Nalorakk': '納羅拉克之穴',
+    'Nalorakk': '納羅拉克',
+    'The Blinding Vale': '盲目谷地',
+    'Voidscar Arena': '虛痕競技場',
+
+    'Kings\' Rest': '諸王之眠',
+    'Kings Rest': '諸王之眠',
+    'The Golden Serpent': '黃金巨蛇',
+    'Mchimba the Embalmer': '防腐者姆沁巴',
+    'The Council of Tribes': '部族議會',
+    'Dazar, The First King': '始祖之王達薩',
+
+    'Temple of Sethraliss': '瑟沙利斯神廟',
+    'Adderis and Aspix': '艾德里斯與阿斯皮克斯',
+    'Merektha': '梅雷克莎',
+    'Galvazzt': '加瓦茲特',
+    'Avatar of Sethraliss': '瑟沙利斯的化身',
+
+    'Ruby Life Pools': '晶紅生命之池',
+    'Melidrussa Chillworn': '莫莉杜莎·霜亡',
+    'Kokia Blazehoof': '柯奇亞·熾足',
+    'Kyrakka and Erkhart Stormvein': '凱拉卡與埃克哈特·風脈',
+
+    // Midnight Season 1 Dungeons (午夜第 1 季地城 - 台服官方繁中)
+    'Windrunner Spire': '風行者之塔',
+    'Maisara Caverns': '麥薩拉洞穴',
+    'Nexus-Point Xenas': '結點瑟納斯',
+    'Magisters\' Terrace': '博學者殿堂',
+    'Magisters Terrace': '博學者殿堂',
+    'Pit of Saron': '薩倫之淵',
+    'Skyreach': '擎天峰',
+    'Seat of the Triumvirate': '三傑議會之座',
+    'Algeth\'ar Academy': '阿爾蓋薩學院',
+    'Algethar Academy': '阿爾蓋薩學院',
+
+    // The War Within - Raids (地心之戰團隊副本)
+    'Liberation of Undermine': '解放幽坑城',
+    'The Liberation of Undermine': '解放幽坑城',
+    'Nerub-ar Palace': '奈幽巴宮殿',
+    'Manaforge Omega': '法力靈爐歐米茄',
+    'Manaforge Omega': '法力靈爐歐米茄',
+
+    // Liberation of Undermine Bosses (解放幽坑城首領)
+    'Vexie and the Geargrinders': '薇克希和齒輪幫',
+    'Vexie & the Geargrinders': '薇克希和齒輪幫',
+    'Cauldron of Carnage': '兇殘大鍋',
+    'Rik Reverb': '里克‧李福伯',
+    'Stix Bunkjunker': '史提克‧邦江克',
+    'Sprocketmonger Lockenstock': '鏈販‧鎖貨',
+    'The One-Armed Bandit': '獨臂強盜',
+    'One-Armed Bandit': '獨臂強盜',
+    'Mug\'Zee, Heads of Security': '瑪格吉',
+    'Mug\'Zee': '瑪格吉',
+    'Chrome King Gallywix': '閃亮亮大王加里維克斯',
+    'Gallywix': '加里維克斯',
+
+    // Nerub-ar Palace Bosses (奈幽巴宮殿首領)
+    'Ulgrax the Devourer': '吞噬者烏格拉克斯',
+    'The Bloodbound Horror': '血縛恐懼',
+    'Bloodbound Horror': '血縛恐懼',
+    'Sikran, Captain of the Sureki': '蘇雷吉隊長希克朗',
+    'Sikran': '希克朗',
+    'Rasha\'nan': '羅夏南',
+    'Broodtwister Ovi\'nax': '育巢者歐維納克斯',
+    'Nexus-Princess Ky\'veza': '奧核之姬綺維札',
+    'The Silken Court': '絲線議會',
+    'Silken Court': '絲線議會',
+    'Queen Ansurek': '安蘇芮克女王',
+
+    // World Bosses (世界首領)
+    'Orta, the Broken Mountain': '碎山歐爾塔',
+    'Kordac, the Dormant Protector': '沉睡的守護者寇達克',
+    'Aggregation of Horrors': '恐怖聚合體',
+    'Shurrai, Atrocity of the Undersea': '海底暴行舒瑞',
+
+    // Season 2 Dungeons & Bosses (第 2 季地城與首領)
+    'Operation: Floodgate': '水閘行動',
+    'Operation Floodgate': '水閘行動',
+    'Big Dahlia': '大達莉亞',
+    'Demolition Duo': '爆破雙人組',
+    'Swampface': '沼澤臉',
+    'Geezle Gigazap': '吉澤爾·吉咖電',
+
+    'Cinderbrew Meadery': '燼釀酒莊',
+    'Brew Master Aldryr': '釀酒大師艾德里爾',
+    'I\'pa': '愛帕',
+    'Benk Buzzbee': '班克·嗡蜂',
+    'Goldie Baronbottom': '高蒂·男爵底',
+
+    'Darkflame Cleft': '暗焰裂縫',
+    'Ol\' Waxbeard': '老蠟鬍',
+    'Blazikon': '烈焰巨鳥',
+    'The Candle King': '蠟燭之王',
+    'Candle King': '蠟燭之王',
+    'The Darkness': '黑暗',
+
+    'The Priory of the Sacred Flame': '聖焰隱修院',
+    'Priory of the Sacred Flame': '聖焰隱修院',
+    'Captain Dailcry': '戴克里隊長',
+    'Baron Braunpyre': '布朗派爾男爵',
+    'Prioress Murrpray': '女修道院長穆爾普雷',
+
+    'The Rookery': '培育所',
+    'Rookery': '培育所',
+    'Kyrioss': '基里奧斯',
+    'Stormguard Gorrena': '風暴守衛戈雷納',
+    'Voidstone Monstrosity': '虛無之石巨怪',
+
+    'The MOTHERLODE!!': '晶喜鎮',
+    'The Motherlode!!': '晶喜鎮',
+    'The Motherlode': '晶喜鎮',
+    'Coin-Operated Crowd Pummeler': '投幣式群眾重擊者',
+    'Azerokk': '艾澤洛克',
+    'Rixxa Fluxflame': '瑞克莎·流火',
+    'Mogul Razdunk': '商業大亨拉茲敦克',
+
+    'Theater of Pain': '苦痛劇場',
+    'An Affront of Challengers': '挑戰者聚會',
+    'Gorechop': '高爾喬普',
+    'Xav the Unfallen': '不屈的薩夫',
+    'Kul\'tharok': '庫薩洛克',
+    'Mordretha, the Endless Empress': '無盡女皇莫德蕾薩',
+    'Mordretha': '莫德蕾薩',
+
+    'Operation: Mechagon - Workshop': '機械岡行動 - 工坊',
+    'Operation Mechagon - Workshop': '機械岡行動 - 工坊',
+    'Operation: Mechagon - Junkyard': '機械岡行動 - 廢料場',
+    'Operation Mechagon - Junkyard': '機械岡行動 - 廢料場',
+    'Tussie Tonks': '狂歡坦克',
+    'K.U.-J.0.': '狂犬狗',
+    'Machinist\'s Garden': '機械師花園',
+    'King Mechagon': '麥卡貢國王',
+    'King Gobbamak': '高巴馬克國王',
+    'Gunker': '岡克',
+    'Trixie & Naeno': '翠克希與奈諾',
+    'HK-8 Aerial Oppression Unit': 'HK-8 空中壓制單位',
+
+    // Season 1 Dungeons & Bosses (第 1 季地城與首領)
+    'Ara-Kara, City of Echoes': '回音之城亞拉卡拉',
+    'Ara-Kara': '回音之城亞拉卡拉',
+    'Avanoxx': '阿瓦諾克斯',
+    'Anub\'zekt': '阿努布澤克特',
+    'Ki\'katal the Harvester': '收割者基卡塔爾',
+
+    'City of Threads': '蛛絲之城',
+    'Orator Krix\'vizk': '演說者克里克斯維茲克',
+    'Fangs of the Queen': '女王之牙',
+    'The Coaglamation': '凝聚之物',
+    'Coaglamation': '凝聚之物',
+    'Izo, the Grand Splicer': '大接合師伊佐',
+
+    'The Stonevault': '石庫',
+    'Stonevault': '石庫',
+    'E.D.N.A.': '愛德娜',
+    'Skarmorak': '斯卡莫拉克',
+    'Master Machinists': '機械大師',
+    'Void Speaker Eirich': '虛無宣講者艾利希',
+
+    'The Dawnbreaker': '破曉者號',
+    'Dawnbreaker': '破曉者號',
+    'Speaker Shadowcrown': '宣講者暗冠',
+    'Anub\'ikkaj': '阿努比卡吉',
+    'Rasha\'nan (The Dawnbreaker)': '羅夏南',
+
+    'Mists of Tirna Scithe': '特那希迷霧',
+    'Ingra Maloch': '英格拉·馬羅克',
+    'Mistcaller': '喚霧者',
+    'Tred\'ova': '特雷多瓦',
+
+    'The Necrotic Wake': '瘟疫之歿',
+    'Necrotic Wake': '瘟疫之歿',
+    'Blightbone': '凋骨',
+    'Amarth, The Harvester': '收割者阿瑪斯',
+    'Surgeon Stitchflesh': '縫肉外科醫生',
+    'Nalthor the Rimebinder': '縛霜者納爾索',
+
+    'Siege of Boralus': '波拉勒斯圍城戰',
+    'Chopper Redhook': '「屠夫」紅鉤',
+    'Dread Captain Lockwood': '恐怖船長洛克伍德',
+    'Hadal Darkfathom': '哈達爾·黑淵',
+    'Viq\'Goth': '維克戈斯',
+
+    'Grim Batol': '格瑞姆巴托',
+    'General Umbriss': '昂布里斯將軍',
+    'Forgemaster Throngus': '鍛造大師索隆格斯',
+    'Drahga Shadowburner': '達加·燃影者',
+    'Erudax, the Duke of Below': '「地底公爵」埃魯達克斯',
+    'Erudax': '埃魯達克斯',
     'Include Off-Spec Items': '包含非主專精物品',
     'Include Catalyst Items': '包含催化劑物品',
     'Add Vault Socket': '新增寶庫插槽',
@@ -1065,133 +1459,6 @@
     }
   }
 
-  function queueWowheadRefresh() {
-    if (wowheadRefreshTimer !== null) {
-      return;
-    }
-
-    wowheadRefreshTimer = window.setTimeout(() => {
-      wowheadRefreshTimer = null;
-      const wowheadPower = window.$WowheadPower;
-      if (wowheadPower && typeof wowheadPower.refreshLinks === 'function') {
-        wowheadRefreshRetries = 0;
-        wowheadPower.refreshLinks();
-      } else if (wowheadRefreshRetries < MAX_WOWHEAD_RETRIES) {
-        wowheadRefreshRetries += 1;
-        queueWowheadRefresh();
-      }
-    }, 80);
-  }
-
-  function toTwWowheadUrl(hrefLike) {
-    let url;
-    try {
-      url = new URL(hrefLike, window.location.href);
-    } catch (_) {
-      return null;
-    }
-    if (!WOWHEAD_HOST.test(url.hostname)) {
-      return null;
-    }
-
-    url.protocol = 'https:';
-
-    const hostParts = url.hostname.toLowerCase().split('.');
-    const sub = hostParts.length > 2 ? hostParts[0] : '';
-    if (['classic', 'tbc', 'wotlk', 'cata', 'mop', 'ptr', 'ptr-2', 'beta'].includes(sub)) {
-      url.hostname = `${sub}.wowhead.com`;
-    } else {
-      url.hostname = 'tw.wowhead.com';
-    }
-
-    // 清除路徑中殘留的語系前綴（例如 /tw/item=... 轉回 /item=...）
-    const segments = url.pathname.split('/').filter(Boolean);
-    if (segments.length > 0 && WOWHEAD_LOCALE_SEGMENTS.has(segments[0].toLowerCase())) {
-      segments.shift();
-    }
-
-    url.pathname = '/' + segments.join('/');
-    return url.toString();
-  }
-
-  // data-wowhead 會蓋掉 href 的解析結果，所以只在它已存在時補上 domain=tw，
-  // 不自行建立（避免漏掉 href 上的 bonus / ilvl 等參數而顯示錯誤的 tooltip）。
-  function applyTwDomainToDataWowhead(link) {
-    const raw = link.getAttribute('data-wowhead');
-    if (!raw) {
-      return false;
-    }
-
-    const parts = raw.split('&').filter(Boolean);
-    let changed = false;
-    let found = false;
-    for (let i = 0; i < parts.length; i += 1) {
-      if (/^domain=/i.test(parts[i])) {
-        found = true;
-        if (parts[i] !== 'domain=' + TW_LOCALE) {
-          parts[i] = 'domain=' + TW_LOCALE;
-          changed = true;
-        }
-      }
-    }
-    if (!found) {
-      parts.push('domain=' + TW_LOCALE);
-      changed = true;
-    }
-    if (changed) {
-      link.setAttribute('data-wowhead', parts.join('&'));
-    }
-    return changed;
-  }
-
-  function patchWowheadLinks(root = document) {
-    const links = [];
-
-    if (root instanceof HTMLAnchorElement) {
-      links.push(root);
-    }
-
-    if (root instanceof Document || root instanceof Element) {
-      for (const link of root.querySelectorAll('a[href*="wowhead.com"]')) {
-        links.push(link);
-      }
-    }
-
-    let touched = false;
-    for (const link of links) {
-      const href = link.getAttribute('href') || '';
-      if (!/(?:\/item(?:=|\/)|\/spell(?:=|\/))/.test(href)) {
-        continue;
-      }
-
-      const newHref = toTwWowheadUrl(href);
-      if (!newHref) {
-        continue;
-      }
-      if (newHref !== href) {
-        link.setAttribute('href', newHref);
-        touched = true;
-      }
-
-      if (applyTwDomainToDataWowhead(link)) {
-        touched = true;
-      }
-
-      const isItemLink = /\/item(?:=|\/)/.test(newHref);
-      const isSpellLink = /\/spell(?:=|\/)/.test(newHref);
-      const hasText = (link.textContent || '').trim().length > 0;
-      const hasImage = link.querySelector('img') !== null;
-      if ((isItemLink || isSpellLink) && hasText && !hasImage && link.dataset.whRenameLink !== 'true') {
-        link.dataset.whRenameLink = 'true';
-        touched = true;
-      }
-    }
-
-    if (touched) {
-      queueWowheadRefresh();
-    }
-  }
-
   function translateDocumentTitle() {
     const translated = translateText(document.title);
     if (translated && translated !== document.title) {
@@ -1199,389 +1466,27 @@
     }
   }
 
-  function getRectCenter(rect) {
-    return {
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2,
-    };
+  // ── 啟動 Wowhead 共用庫與 DOM 監聽 ───────────────────────────────────────
+  const whHelper = typeof WowheadTwHelper !== 'undefined'
+    ? new WowheadTwHelper({
+        enableRenameLinks: true,
+        enableSafeLinkify: true,
+        excludedPanelKeywords: ['summary', '總覽', 'bonus roll', '好運符', 'boss summary', 'dungeon summary'],
+        onScan: (root) => {
+          translateAttributesInTree(root);
+          walkTextNodes(root);
+          translateDocumentTitle();
+        },
+        onUrlChange: () => {
+          translatedNodeText = new WeakMap();
+        },
+      })
+    : null;
+
+  if (whHelper) {
+    whHelper.registerNonItemNames(Object.keys(EXACT_TW));
+    whHelper.registerDungeonMap(DUNGEON_TW_MAP);
+    whHelper.start();
   }
-
-  function isLikelyItemOrEnchantName(text) {
-    if (!text) {
-      return false;
-    }
-
-    const value = text.trim();
-    if (value.length < 4 || value.length > 64) {
-      return false;
-    }
-
-    if (EXACT_TW[value] || EXACT_TW_CI[value.toLowerCase()]) {
-      return false;
-    }
-
-    if (translateDungeon(value)) {
-      return false;
-    }
-
-    if (!/[A-Za-z]/.test(value)) {
-      return false;
-    }
-
-    if (/[0-9:/()[\]{}]/.test(value)) {
-      return false;
-    }
-
-    if (/^[a-z\s'-]+$/.test(value)) {
-      return false;
-    }
-
-    const words = value.split(/\s+/).filter(Boolean);
-    if (words.length > 10) {
-      return false;
-    }
-
-    return true;
-  }
-
-  function findNearestWowheadIconLink(textElement) {
-    const textRect = textElement.getBoundingClientRect();
-    if (textRect.width === 0 && textRect.height === 0) {
-      return null;
-    }
-
-    const textCenter = getRectCenter(textRect);
-
-    let ancestor = textElement;
-    for (let depth = 0; depth < 3 && ancestor; depth += 1) {
-      ancestor = ancestor.parentElement;
-      if (!(ancestor instanceof Element)) {
-        continue;
-      }
-
-      const links = ancestor.querySelectorAll(WOWHEAD_ITEM_OR_SPELL_LINK);
-
-      const mainLinks = [];
-      for (const link of links) {
-        if (!(link instanceof HTMLAnchorElement)) {
-          continue;
-        }
-        const img = link.querySelector('img');
-        if (!img) {
-          continue;
-        }
-        if (img.height && img.height < 12) {
-          continue;
-        }
-        mainLinks.push(link);
-      }
-
-      if (mainLinks.length === 0) {
-        continue;
-      }
-      if (mainLinks.length > 6) {
-        return null;
-      }
-
-      let bestLink = null;
-      let bestScore = Number.POSITIVE_INFINITY;
-
-      for (const link of mainLinks) {
-        const rect = link.getBoundingClientRect();
-        if (rect.width === 0 && rect.height === 0) {
-          continue;
-        }
-
-        const center = getRectCenter(rect);
-        const dx = Math.abs(center.x - textCenter.x);
-        const dy = Math.abs(center.y - textCenter.y);
-        if (dy > 18 || dx > 240) {
-          continue;
-        }
-
-        const score = dy * 16 + dx;
-        if (score < bestScore) {
-          bestScore = score;
-          bestLink = link;
-        }
-      }
-
-      if (bestLink) {
-        return bestLink;
-      }
-    }
-
-    return null;
-  }
-
-  function linkifyNameElement(nameElement, iconLink) {
-    if (nameElement.closest('a')) {
-      return false;
-    }
-    if (nameElement.dataset.twWowheadLinked === 'true') {
-      return false;
-    }
-
-    const href = iconLink.getAttribute('href');
-    if (!href || !/wowhead\.com\//i.test(href)) {
-      return false;
-    }
-
-    // 圖示連結可能還沒被 patchWowheadLinks 正規化，這裡先轉成新版繁中網址，
-    // 下面的去重比對和新建的連結都用同一份，避免新舊格式各建一條。
-    const twHref = toTwWowheadUrl(href) || href;
-
-    const originalText = (nameElement.textContent || '').trim();
-    if (!isLikelyItemOrEnchantName(originalText)) {
-      return false;
-    }
-
-    let scope = nameElement.parentElement;
-    for (let depth = 0; depth < 4 && scope; depth += 1) {
-      const existingAnchors = scope.querySelectorAll('a[data-wh-rename-link="true"]');
-      for (const existing of existingAnchors) {
-        if (
-          existing !== iconLink
-          && !nameElement.contains(existing)
-          && existing.getAttribute('href') === twHref
-        ) {
-          return false;
-        }
-      }
-      scope = scope.parentElement;
-    }
-
-    const anchor = document.createElement('a');
-    anchor.setAttribute('href', twHref);
-    anchor.setAttribute('rel', 'noopener');
-    anchor.setAttribute('target', '_blank');
-    anchor.dataset.whRenameLink = 'true';
-    anchor.style.color = 'inherit';
-    anchor.style.textDecoration = 'none';
-    anchor.textContent = originalText;
-
-    const dataWowhead = iconLink.getAttribute('data-wowhead');
-    if (dataWowhead) {
-      anchor.setAttribute('data-wowhead', dataWowhead);
-      applyTwDomainToDataWowhead(anchor);
-    }
-
-    nameElement.textContent = '';
-    nameElement.appendChild(anchor);
-    nameElement.dataset.twWowheadLinked = 'true';
-    return true;
-  }
-
-  const DUNGEON_NAME_ONLY_PANEL_HEADINGS = new Set([
-    'Dungeon Summary',
-    '副本總覽',
-    'Boss Summary',
-    '首領總覽',
-  ]);
-
-  function isInsideDungeonNameOnlyPanel(element) {
-    let current = element;
-    while (current && current !== document.body) {
-      if (current instanceof Element && current.classList.contains('Panel')) {
-        const heading = current.querySelector('.PanelHeader .Heading, .PanelHeader h1, .PanelHeader h2, .PanelHeader h3, .PanelHeader h4, .PanelHeader h5, .PanelHeader h6');
-        if (heading) {
-          const headingText = (heading.textContent || '').trim();
-          if (DUNGEON_NAME_ONLY_PANEL_HEADINGS.has(headingText)) {
-            return true;
-          }
-        }
-      }
-      current = current.parentElement;
-    }
-    return false;
-  }
-
-  function linkifyNearbyItemNames(root = document) {
-    const scope = root instanceof Document ? root.body : root;
-    if (!(scope instanceof Element)) {
-      return false;
-    }
-
-    const candidates = [];
-    if (scope.matches('p,span,div')) {
-      candidates.push(scope);
-    }
-    for (const node of scope.querySelectorAll('p,span,div')) {
-      candidates.push(node);
-    }
-    let touched = false;
-
-    for (const candidate of candidates) {
-      if (!(candidate instanceof Element)) {
-        continue;
-      }
-
-      if (candidate.childElementCount !== 0) {
-        continue;
-      }
-      if (candidate.closest('a,button,label,textarea,select,[role="button"]')) {
-        continue;
-      }
-      if (candidate.closest('h1,h2,h3,h4,h5,h6,thead,th,caption,[role="heading"],[role="columnheader"]')) {
-        continue;
-      }
-      if (isInsideDungeonNameOnlyPanel(candidate)) {
-        continue;
-      }
-      if (candidate.classList.contains('Tooltip_box')) {
-        continue;
-      }
-      if (candidate.dataset.twWowheadLinked === 'true') {
-        continue;
-      }
-
-      const text = (candidate.textContent || '').trim();
-      if (!isLikelyItemOrEnchantName(text)) {
-        continue;
-      }
-
-      const iconLink = findNearestWowheadIconLink(candidate);
-      if (!iconLink) {
-        continue;
-      }
-
-      if (linkifyNameElement(candidate, iconLink)) {
-        touched = true;
-      }
-    }
-
-    return touched;
-  }
-
-  function queueRoot(root) {
-    if (!root) {
-      return;
-    }
-
-    let target = root;
-    if (target instanceof Document) {
-      target = target.body;
-    } else if (target.nodeType === Node.TEXT_NODE) {
-      target = target.parentElement;
-    }
-
-    if (!(target instanceof Element)) {
-      return;
-    }
-
-    pendingRoots.add(target);
-    if (flushTimer !== null) {
-      return;
-    }
-
-    flushTimer = window.setTimeout(flushPendingRoots, 160);
-  }
-
-  function flushPendingRoots() {
-    flushTimer = null;
-    const roots = Array.from(pendingRoots);
-    pendingRoots.clear();
-
-    let linkifyTouched = false;
-    for (const root of roots) {
-      if (!document.body || !document.contains(root)) {
-        continue;
-      }
-      if (linkifyNearbyItemNames(root)) {
-        linkifyTouched = true;
-      }
-      translateAttributesInTree(root);
-      walkTextNodes(root);
-      patchWowheadLinks(root);
-    }
-
-    if (linkifyTouched) {
-      patchWowheadLinks(document);
-    }
-    translateDocumentTitle();
-  }
-
-  function runFullPass(resetNodeCache = false) {
-    if (!document.body) {
-      return;
-    }
-    if (resetNodeCache) {
-      translatedNodeText = new WeakMap();
-    }
-    queueRoot(document.body);
-  }
-
-  function onUrlChange(force = false) {
-    const currentUrl = location.href;
-    if (!force && currentUrl === lastUrl) {
-      return;
-    }
-
-    lastUrl = currentUrl;
-    runFullPass(true);
-    setTimeout(() => runFullPass(false), 300);
-    setTimeout(() => runFullPass(false), 900);
-    setTimeout(() => runFullPass(false), 1800);
-  }
-
-  function startWhenReady() {
-    if (!document.body) {
-      document.addEventListener('DOMContentLoaded', startWhenReady, { once: true });
-      return;
-    }
-
-    runFullPass(true);
-    setTimeout(() => runFullPass(false), 350);
-    setTimeout(() => runFullPass(false), 1000);
-    setTimeout(() => runFullPass(false), 2200);
-
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === 'childList') {
-          for (const added of mutation.addedNodes) {
-            if (added.nodeType === Node.ELEMENT_NODE || added.nodeType === Node.TEXT_NODE) {
-              queueRoot(added);
-            }
-          }
-        } else if (mutation.type === 'characterData') {
-          queueRoot(mutation.target);
-        } else if (mutation.type === 'attributes') {
-          const target = mutation.target;
-          if (target instanceof Element) {
-            queueRoot(target);
-            if (mutation.attributeName === 'href') {
-              patchWowheadLinks(target);
-            }
-          }
-        }
-      }
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-      attributes: true,
-      attributeFilter: ['href', 'title', 'aria-label', 'placeholder', 'value'],
-    });
-  }
-
-  const rawPushState = history.pushState.bind(history);
-  history.pushState = function (...args) {
-    const result = rawPushState(...args);
-    onUrlChange();
-    return result;
-  };
-
-  const rawReplaceState = history.replaceState.bind(history);
-  history.replaceState = function (...args) {
-    const result = rawReplaceState(...args);
-    onUrlChange();
-    return result;
-  };
-
-  window.addEventListener('popstate', () => onUrlChange());
-  window.addEventListener('hashchange', () => onUrlChange());
-
-  startWhenReady();
 })();
+
