@@ -1,6 +1,6 @@
 /**
  * Wowhead Traditional Chinese Helper Library (WowheadTwHelper)
- * @version 1.6.1
+ * @version 1.7.0
  * @description Shared library for UserScripts to localize Wowhead links, tooltips, and handle SPA dynamic updates safely.
  * @license MIT
  */
@@ -49,6 +49,7 @@
      * @param {boolean} [options.autoInit=true] - 自動初始化環境
      * @param {boolean} [options.enableRenameLinks=true] - 自動為符合條件的連結加上 data-wh-rename-link="true"
      * @param {boolean} [options.enableSafeLinkify=false] - 是否開啟純文字裝備名稱自動超連結化
+     * @param {boolean} [options.enableIconLinkRename=false] - 用探針翻譯「圖示與名稱同在一個連結內」的情況
      * @param {string[]} [options.excludedPanelKeywords] - 面板標題排除關鍵字（預設包含 summary, 總覽 等）
      * @param {Function} [options.onScan] - DOM 掃描回呼 (root) => void
      * @param {Function} [options.onUrlChange] - 網址變更回呼 (url) => void
@@ -59,6 +60,7 @@
           autoInit: true,
           enableRenameLinks: true,
           enableSafeLinkify: false,
+          enableIconLinkRename: false,
           excludedPanelKeywords: ['summary', '總覽', 'bonus roll', '好運符', 'boss summary', 'dungeon summary'],
           onScan: null,
           onUrlChange: null,
@@ -72,6 +74,7 @@
       this.wowheadRefreshTimer = null;
       this.wowheadRefreshRetries = 0;
       this.maxWowheadRetries = 30;
+      this.maxRenameProbeAttempts = 20;
       this.pendingRoots = new Set();
       this.flushTimer = null;
       this.lastUrl = typeof location !== 'undefined' ? location.href : '';
@@ -225,6 +228,120 @@
           this.queueWowheadRefresh();
         }
       }, 80);
+    }
+
+    /**
+     * 找出連結內裝著「名稱」的那個文字節點。
+     * 圖示沒有文字、使用率徽章只有數字與 %，所以取字母最多的那個文字節點即可。
+     * @param {Element} link
+     * @returns {Text|null}
+     */
+    findNameTextNode(link) {
+      const walker = document.createTreeWalker(link, NodeFilter.SHOW_TEXT);
+      let best = null;
+      let bestLength = 0;
+      let node;
+
+      while ((node = walker.nextNode())) {
+        const text = node.textContent.trim();
+        if (!/[A-Za-z]{2}/.test(text)) continue;
+        if (text.length > bestLength) {
+          best = node;
+          bestLength = text.length;
+        }
+      }
+      return best;
+    }
+
+    /**
+     * 翻譯「圖示、數據與名稱同在一個連結內」的情況。
+     *
+     * 這種連結不能直接掛 data-wh-rename-link —— Wowhead widget 是把整個
+     * innerHTML 換成 <span>名稱</span>，圖示與數據會一起消失。實測結構：
+     *
+     *     <a href="/spell=1286970">
+     *       <div><img></div>                       圖示
+     *       <div class="percentage_badge">82.9%</div>   使用率
+     *       <span>Rune of Unleashed Fire</span>    名稱
+     *     </a>
+     *
+     * 所以改用探針：另外造一個隱藏連結讓 widget 去改寫，讀出譯名後只寫回原
+     * 連結裡放名稱的那個文字節點，原連結全程不掛改名標記。
+     *
+     * @param {Document|Element} root
+     */
+    renameIconLinksByProbe(root = document) {
+      if (!this.options.enableIconLinkRename || !document.body) return;
+
+      const scope = root && root.querySelectorAll ? root : document;
+      const jobs = [];
+
+      for (const link of scope.querySelectorAll('a[href*="wowhead.com"]')) {
+        if (link.dataset.twIconRenamed === 'true') continue;
+        if (link.dataset.whRenameLink === 'true') continue;  // 一般路徑已經處理
+        if (!link.querySelector('img')) continue;            // 沒圖示就不需要探針
+
+        const twHref = this.toTwWowheadUrl(link.getAttribute('href') || '');
+        if (!twHref || !/\/(?:item|spell|currency)(?:=|\/)/.test(twHref)) continue;
+
+        const nameNode = this.findNameTextNode(link);
+        if (!nameNode) continue;
+
+        const original = nameNode.textContent.trim();
+        if (!original || this.nonItemNames.has(original)) continue;
+
+        const probe = document.createElement('a');
+        probe.setAttribute('href', twHref);
+        probe.setAttribute('data-wh-rename-link', 'true');
+        probe.dataset.whRenameLink = 'true';
+        probe.textContent = original;
+        // 不能用 display:none —— widget 會略過不算數的節點。移到畫面外即可。
+        probe.style.cssText =
+          'position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;';
+        document.body.appendChild(probe);
+
+        link.dataset.twIconRenamed = 'true';
+        jobs.push({ link: link, nameNode: nameNode, probe: probe, original: original });
+      }
+
+      if (!jobs.length) return;
+
+      this.queueWowheadRefresh();
+      this.collectRenameProbes(jobs, 0);
+    }
+
+    /**
+     * 輪詢探針，改名到了就寫回原連結。逾時的探針一定要移除，否則會在 DOM 裡累積。
+     * @param {Array} jobs
+     * @param {number} attempt
+     */
+    collectRenameProbes(jobs, attempt) {
+      window.setTimeout(() => {
+        const pending = [];
+
+        for (const job of jobs) {
+          const renamed = (job.probe.textContent || '').trim();
+
+          if (renamed && renamed !== job.original) {
+            if (job.nameNode.textContent.indexOf(job.original) !== -1) {
+              job.nameNode.textContent = job.nameNode.textContent.replace(job.original, renamed);
+            }
+            job.probe.remove();
+          } else {
+            pending.push(job);
+          }
+        }
+
+        if (pending.length && attempt < this.maxRenameProbeAttempts) {
+          this.collectRenameProbes(pending, attempt + 1);
+          return;
+        }
+
+        for (const job of pending) {
+          job.probe.remove();
+          delete job.link.dataset.twIconRenamed;  // 下一輪掃描可以再試
+        }
+      }, 250);
     }
 
     /**
@@ -544,6 +661,7 @@
         }
 
         this.patchWowheadLinks(root);
+        this.renameIconLinksByProbe(root);
       }
 
       if (linkifyTouched) {

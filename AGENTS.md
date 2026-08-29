@@ -85,7 +85,40 @@ node tools/generate-game-names.mjs --self-test
 4. **遊戲名稱查表** — `registerGameNameLookup(fn)` 接一個 `(englishName) => string|null`，
    由 `libs/game-names-tw.js` 提供。同時用於 linkify 守門（副本／首領名不可被當成裝備名）。
 
+5. **探針式改名**（`enableIconLinkRename`，預設關閉） — 見下。
+
 各站腳本的翻譯邏輯一律掛在 `onScan` / `onUrlChange` callback 上，**不要**自己再開 observer。
+
+#### 為什麼有些連結不能直接掛 `data-wh-rename-link`
+
+Wowhead widget 改名的方式是**把整個 `innerHTML` 換成 `<span>名稱</span>`**。連結裡如果
+還裝著別的東西，會一起消失。archon 的符文列就是這種：
+
+```html
+<a href="/spell=1286970">
+  <div><img></div>                            圖示
+  <div class="percentage_badge">82.9%</div>   使用率
+  <span>Rune of Unleashed Fire</span>         名稱
+</a>
+```
+
+`patchWowheadLinks()` 的 `!hasImage` 條件就是在擋這個，**不是疏漏，不要拿掉**。
+
+`renameIconLinksByProbe()` 的解法是不讓 widget 碰原連結：另外造一個移到畫面外的隱藏
+連結（探針）掛上改名標記，widget 改寫探針，讀出譯名後只寫回原連結裡放名稱的那個文字
+節點，最後移除探針。原連結全程不掛 `data-wh-rename-link`。
+
+兩個實作細節：
+
+- 探針**不能用 `display:none`**，widget 會略過不算數的節點；要用 `position:absolute`
+  移到畫面外。
+- 逾時的探針一定要移除並清掉 `data-tw-icon-renamed`，否則探針會在 DOM 裡累積，而那些
+  連結會被永久標記成已處理。
+
+`whTooltips.renameLinks` 是**全域**旗標，設成 true 會讓 widget 改寫頁面上每一個連結 ——
+包含上面那種，圖示和數據一起沒。`setupGlobalLocale()` 刻意不設它，raidbots 還明確設成
+`false`。目前只有 bloodmallet 設 true，因為那邊的連結裡只有文字。**測試時不要順手加上
+它**，會得出「探針破壞了圖示」的錯誤結論（實際上是這個旗標幹的）。
 
 ### 各站腳本的共同形狀
 

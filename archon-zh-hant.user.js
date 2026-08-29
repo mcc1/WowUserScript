@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         Archon.gg Traditional Chinese
 // @namespace    https://www.archon.gg/
-// @version      0.9.1
+// @version      0.10.0
 // @description  Translate archon.gg WoW build pages to Traditional Chinese.
 // @author       mcc
 // @match        https://www.archon.gg/wow/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.6.1
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.7.0
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=2
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/archon-zh-hant.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/archon-zh-hant.user.js
@@ -564,6 +564,8 @@
   const helper = new window.WowheadTwHelper({
     enableRenameLinks: true,
     enableSafeLinkify: false,
+    // 探針式改名先只在 archon 開。raidbots 是最大宗使用者，等這裡驗過再說。
+    enableIconLinkRename: true,
     onScan: (root) => {
       walkTextNodes(root);
       translateBreadcrumbs();
