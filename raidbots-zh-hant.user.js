@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.6.1
+// @version      1.6.2
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
@@ -238,8 +238,8 @@
     'Show All': '全部顯示',
     'Max All': '全部最大化',
     'Upgrade Selected to Max Affordable': '將已選裝備升級至可負擔最高等級',
-    'Catalyst Charges': '轉化催化劑次數',
-    'How many Catalyst charges do you want to use?': '你想使用幾次轉化催化劑？',
+    'Catalyst Charges': '催化次數',
+    'How many Catalyst charges do you want to use?': '你想使用幾次催化？',
     'Catalyze Selected Items': '轉化已選物品',
     'Item Search': '物品搜尋',
     Name: '名稱',
@@ -296,7 +296,7 @@
     Copy: '複製',
     'Copy to Clipboard': '複製到剪貼簿',
     'Copy and Modify...': '複製並修改...',
-    'Convert to Catalyst Item': '轉化為催化劑物品',
+    'Convert to Catalyst Item': '轉化為催化物品',
     'Add socket': '新增插槽',
     'Add socket (Great Vault)': '新增插槽（大秘寶庫）',
     'Remove socket': '移除插槽',
@@ -403,11 +403,11 @@
     'Top Gear will use the global flask setting': 'Top Gear 將使用全域精煉藥劑設定',
     'Top Gear will use the global potion setting': 'Top Gear 將使用全域藥水設定',
     'Smart Sim, Patchwerk, 1 Boss, 5 minutes, SimC Weekly': 'Smart Sim、木樁戰、1 目標、5 分鐘、SimC 每週版',
-    'Sets the upgrade level of the item and allows catalyst transformations': '設定物品升級等級，並允許催化劑轉化。',
+    'Sets the upgrade level of the item and allows catalyst transformations': '設定物品升級等級，並允許催化轉化。',
     'Select multiple pieces of gear and Raidbots will generate all possible combinations and sim them': '選擇多件裝備後，Raidbots 會產生所有可能組合並進行模擬。',
     'Stats to apply to crafted items. Default determined by what is most common on your items': '套用到製作裝備的屬性。預設值依你目前裝備最常見屬性決定。',
     'Warning: Item Search is only intended for max level characters and may allow simming items that cannot be obtained in game.': '警告：物品搜尋僅針對滿等角色，且可能允許模擬遊戲中無法取得的物品。',
-    'This will limit how many Catalyst items are included in a single combination. You must use the': '這會限制單一組合中可包含的催化劑物品數量。你必須使用',
+    'This will limit how many Catalyst items are included in a single combination. You must use the': '這會限制單一組合中可包含的催化物品數量。你必須使用',
     'Copy and Modify menu on items to convert an item.': '物品上的「複製並修改」選單來轉化物品。',
     'Copy and Modify menu to add an upgraded item to the sim.': '使用「複製並修改」選單把升級後物品加入模擬。',
     'Require having sparks/crests/etc available in the Item Upgrade Currency panel to use the item': '使用該物品時，要求在「裝備升級貨幣」面板中有可用火花／紋章等資源。',
@@ -525,9 +525,9 @@
     'Epic Profession Items': '史詩專業物品',
     'Rare Profession Items': '稀有專業物品',
     'PVP Profession Items': 'PVP 專業物品',
-    'Catalyst Season 1': '第 1 季催化劑',
-    'Catalyst Season 2': '第 2 季催化劑',
-    'Catalyst Season 3': '第 3 季催化劑',
+    'Catalyst Season 1': '第 1 季催化',
+    'Catalyst Season 2': '第 2 季催化',
+    'Catalyst Season 3': '第 3 季催化',
     'Delves Season 1': '第 1 季探索',
     'Delves Season 2': '第 2 季探索',
     'Delves Season 3': '第 3 季探索',
@@ -717,7 +717,7 @@
     'Erudax, the Duke of Below': '「地底公爵」埃魯達克斯',
     'Erudax': '埃魯達克斯',
     'Include Off-Spec Items': '包含非主專精物品',
-    'Catalyst': '轉化',
+    'Catalyst': '催化',
     'Great Vault Item': '大秘寶庫物品',
     'Upgraded Item': '升級物品',
     'Recraft': '重製',
@@ -729,7 +729,7 @@
     'Added Socket from Great Vault': '來自大秘寶庫的新增插槽',
     'Modified Item': '已修改物品',
     'Top Gear Search': '最佳配裝搜尋',
-    'Include Catalyst Items': '包含催化劑物品',
+    'Include Catalyst Items': '包含催化物品',
     'Add Vault Socket': '新增寶庫插槽',
     'Preferred Gem': '偏好寶石',
     'Upgrade up to:': '升級至：',
@@ -782,7 +782,7 @@
   // 那會讓「Cat」（貓形態之類）這種普通字也被替換掉。
   const ITEM_BADGE_TW = Object.freeze({
     GV: '寶庫',    // Great Vault Item
-    CAT: '轉化',   // Catalyst
+    CAT: '催化',   // Catalyst
     UPG: '升級',   // Upgraded Item
     REC: '重製',   // Recraft
     TOK: '代幣',   // Token
