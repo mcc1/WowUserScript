@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         Archon.gg Traditional Chinese
 // @namespace    https://www.archon.gg/
-// @version      0.4.0
+// @version      0.6.0
 // @description  Translate archon.gg WoW build pages to Traditional Chinese.
 // @author       mcc
 // @match        https://www.archon.gg/wow/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.5.5
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.6.0
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=1
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/archon-zh-hant.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/archon-zh-hant.user.js
 // @run-at       document-start
@@ -18,60 +19,42 @@
 
   // ── 翻譯表 ────────────────────────────────────────────────────────────────
 
-  const CLASS_TW = Object.freeze({
-    'Death Knight': '死亡騎士',
-    'Demon Hunter': '惡魔獵人',
-    'Druid': '德魯伊',
-    'Evoker': '喚能師',
-    'Hunter': '獵人',
-    'Mage': '法師',
-    'Monk': '武僧',
-    'Paladin': '聖騎士',
-    'Priest': '牧師',
-    'Rogue': '盜賊',
-    'Shaman': '薩滿',
-    'Warlock': '術士',
-    'Warrior': '戰士',
-  });
+  // 職業／專精／種族／英雄天賦的譯名不手寫，一律取自 libs/game-names-tw.js
+  // （暴雪 client DB2 的官方 zhTW）。該檔尚未產生時安全降級為查不到。
+  function gameNames() {
+    return typeof window !== 'undefined' ? window.WowGameNamesTw : null;
+  }
 
-  const SPEC_TW = Object.freeze({
-    'Affliction': '痛苦',
-    'Arcane': '秘法',
-    'Arms': '武器',
-    'Assassination': '刺殺',
-    'Augmentation': '強化',
-    'Balance': '平衡',
-    'Beast Mastery': '野獸控制',
-    'Blood': '血魄',
-    'Brewmaster': '釀酒',
-    'Demonology': '惡魔學識',
-    'Destruction': '毀滅',
-    'Devastation': '破滅',
-    'Devourer': '噬滅',
-    'Discipline': '戒律',
-    'Elemental': '元素',
-    'Enhancement': '增強',
-    'Feral': '野性戰鬥',
-    'Fire': '火焰',
-    'Frost': '冰霜',
-    'Fury': '狂怒',
-    'Guardian': '守護者',
-    'Havoc': '災虐',
-    'Holy': '神聖',
-    'Marksmanship': '射擊',
-    'Mistweaver': '禦霧',
-    'Outlaw': '暴徒',
-    'Preservation': '護存',
-    'Protection': '防護',
-    'Restoration': '恢復',
-    'Retribution': '懲戒',
-    'Shadow': '暗影',
-    'Subtlety': '敏銳',
-    'Survival': '生存',
-    'Unholy': '穢邪',
-    'Vengeance': '復仇',
-    'Windwalker': '御風',
-  });
+  function lookupGameUnit(value) {
+    const table = gameNames();
+    if (!table || typeof table.lookupUnit !== 'function' || !value) return null;
+    try {
+      return table.lookupUnit(value);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /**
+   * archon 需要用英文名做前綴比對（把「Frost Mage」拆成專精 + 職業），
+   * 因此在啟動時用官方英文名清單組出對照表。這裡沒有任何人工翻譯。
+   */
+  function buildUnitMap(group) {
+    const table = gameNames();
+    const list = table && table.UNIT_LISTS ? table.UNIT_LISTS[group] : null;
+    const map = {};
+    if (!Array.isArray(list)) return map;
+    for (const english of list) {
+      const tw = lookupGameUnit(english);
+      if (tw) map[english] = tw;
+    }
+    return map;
+  }
+
+  const CLASS_TW = buildUnitMap('classes');
+  const SPEC_TW = buildUnitMap('specs');
+
+
 
   // 完整比對的 UI 字串
   const EXACT_TW = Object.freeze({
@@ -90,7 +73,7 @@
     'Trinkets': '飾品',
 
     // 內容類型
-    'Mythic+': '史詩鑰石',
+    'Mythic+': '傳奇鑰石',
     'Raid': '團隊副本',
 
     // 篩選標籤
@@ -137,48 +120,6 @@
     'Edit': '編輯',
     'Copy': '複製',
 
-    // 英雄天賦名稱
-    'Deathbringer': '死亡使者',
-    'Rider of the Apocalypse': '天啟騎士',
-    "San'layn": '煞婪',
-    'Aldrachi Reaver': '奧達奇劫奪者',
-    'Fel-Scarred': '魔痕',
-    'Annihilator': '殲滅者',
-    "Elune's Chosen": '伊露恩之選',
-    'Keeper of the Grove': '利爪德魯伊',
-    'Druid of the Claw': '林地看守者',
-    'Wildstalker': '野地潛獵者',
-    'Chronowarden': '時光看守者',
-    'Flameshaper': '塑火者',
-    'Scalecommander': '龍隊指揮官',
-    'Dark Ranger': '黑暗遊俠',
-    'Pack Leader': '獸群領袖',
-    'Sentinel': '哨兵',
-    'Frostfire': '霜火',
-    'Spellslinger': '拋法者',
-    'Sunfury': '日怒',
-    'Conduit of the Celestials': '天尊引導者',
-    'Master of Harmony': '和諧大師',
-    'Shadopan': '影潘',
-    'Herald of the Sun': '太陽先驅',
-    'Lightsmith': '光鑄師',
-    'Templar': '聖殿騎士',
-    'Archon': '御靈者',
-    'Oracle': '神諭者',
-    'Voidweaver': '虛織者',
-    'Deathstalker': '亡靈哨兵',
-    'Fatebound': '命縛者',
-    'Trickster': '欺詐者',
-    'Farseer': '先知',
-    'Stormbringer': '風暴使者',
-    'Totemic': '圖騰師',
-    'Diabolist': '崇魔者',
-    'Hellcaller': '喚魔者',
-    'Soul Harvester': '靈魂收割者',
-    'Colossus': '巨像',
-    'Mountain Thane': '山脈族長',
-    'Slayer': '殺戮者',
-
     // 天賦 tooltip 固定欄位
     'Passive': '被動',
     'Active': '主動',
@@ -221,9 +162,9 @@
     'Talent Tree Build': '天賦配置',
     'Recommended Talent Tree Build': '推薦天賦配置',
     'Gear Overview': '裝備總覽',
-    'Mythic+ Build': '史詩鑰石配置',
+    'Mythic+ Build': '傳奇鑰石配置',
     'Raid Build': '團隊副本配置',
-    'Mythic+ Overview': '史詩鑰石總覽',
+    'Mythic+ Overview': '傳奇鑰石總覽',
     'Raid Overview': '團隊副本總覽',
     'Weapons & Trinkets': '武器 & 飾品',
     'Enchants & Gems': '附魔 & 寶石',
@@ -288,6 +229,12 @@
     }
     if (SPEC_TW[trimmed] !== undefined) {
       return text.replace(trimmed, SPEC_TW[trimmed]);
+    }
+
+    // 英雄天賦樹、種族等其他遊戲資料
+    const unitTw = lookupGameUnit(trimmed);
+    if (unitTw) {
+      return text.replace(trimmed, unitTw);
     }
 
     const combinedTw = translateSpecClassPhrase(trimmed);
