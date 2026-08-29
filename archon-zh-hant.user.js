@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Archon.gg Traditional Chinese
 // @namespace    https://www.archon.gg/
-// @version      0.8.0
+// @version      0.9.0
 // @description  Translate archon.gg WoW build pages to Traditional Chinese.
 // @author       mcc
 // @match        https://www.archon.gg/wow/*
@@ -39,6 +39,21 @@
    * archon 需要用英文名做前綴比對（把「Frost Mage」拆成專精 + 職業），
    * 因此在啟動時用官方英文名清單組出對照表。這裡沒有任何人工翻譯。
    */
+  /**
+   * 副本／團本／首領的官方繁中。archon 的「選擇首領」下拉、團隊副本的首領篩選
+   * 都需要，但這支腳本原本只查 lookupUnit（種族／職業／專精），從來沒查過這張
+   * 表 —— 譯名一直都在產生器的輸出裡，只是沒人去拿。
+   */
+  function lookupGameName(value) {
+    const table = gameNames();
+    if (!table || typeof table.lookup !== 'function' || !value) return null;
+    try {
+      return table.lookup(value);
+    } catch (_) {
+      return null;
+    }
+  }
+
   function buildUnitMap(group) {
     const table = gameNames();
     const list = table && table.UNIT_LISTS ? table.UNIT_LISTS[group] : null;
@@ -146,6 +161,42 @@
     'Mastery': '精通',
     'Versatility': '臨機',
     'Vers': '臨機',
+
+    // 附魔／寶石頁
+    'Enchants': '附魔',
+    'Gems': '寶石',
+    'Gem': '寶石',
+    'Epic Gems': '史詩寶石',
+    'Epic Gem': '史詩寶石',
+    'Enchants by Slot': '各部位附魔',
+    'Enchant Tables': '附魔表',
+    'Most Popular': '最熱門',
+
+    // 裝備部位（暴雪官方欄位名）
+    'Head': '頭部',
+    'Legs': '腿部',
+    'Shoulders': '肩部',
+    'Feet': '腳部',
+    'Chest': '胸部',
+    'Rings': '手指',
+    'Main-Hand': '主手',
+
+    // 消耗品頁。Flask 的官方分類是「合劑」（Wowhead item=191359 歸在該分類下）
+    'Consumables by Type': '各類消耗品',
+    'Consumable Tables': '消耗品表',
+    'Flask': '合劑',
+    'Health Potion': '治療藥水',
+    'Combat Potion': '戰鬥藥水',
+    'Food Buff': '食物增益',
+    'Weapon Buff': '武器增益',
+
+    // 團隊副本篩選。Mythic 難度是「傳奇」，見 AGENTS.md 用語規則
+    'Select Encounter': '選擇首領',
+    'Difficulty': '難度',
+    'Mythic': '傳奇',
+    'Boss': '首領',
+    'All Bosses': '所有首領',
+    'Show DPS & HPS': '顯示 DPS & HPS',
 
     // 其他 UI
     'Last updated': '最後更新',
@@ -331,6 +382,7 @@
   const NUMBERED_RE = /^(.+?)\s+#(\d+)$/;
   const CONTENT_PHRASE_RE = /^(Mythic\+|Raid)\s+(.+)$/;
   const PARSES_RE = /^([\d.,]+[kKmM]?)\s+parses$/;
+  const ROW_RE = /^Row\s+(\d+)$/;
 
   /**
    * 「Mythic+ Talent Tree」→「傳奇鑰石天賦」。
@@ -349,6 +401,12 @@
     if (!match) return null;
     const base = EXACT_TW[match[1]] || TITLE_SUFFIX_TW[match[1]];
     return base ? `${base} #${match[2]}` : null;
+  }
+
+  /** 「Row 1」→「第 1 列」 */
+  function translateRowLabel(text) {
+    const match = text.match(ROW_RE);
+    return match ? `第 ${match[1]} 列` : null;
   }
 
   /** 「138.5k parses」→「138.5k 筆解析」 */
@@ -376,6 +434,12 @@
     const unitTw = lookupGameUnit(trimmed);
     if (unitTw) {
       return text.replace(trimmed, unitTw);
+    }
+
+    // 副本／團本／首領
+    const nameTw = lookupGameName(trimmed);
+    if (nameTw) {
+      return text.replace(trimmed, nameTw);
     }
 
     const combinedTw = translateSpecClassPhrase(trimmed);
@@ -412,6 +476,7 @@
       || translateContentPhrase(trimmed)
       || translateNumbered(trimmed)
       || translateParseCount(trimmed)
+      || translateRowLabel(trimmed)
       || translateKeyRange(trimmed)
       || translateRelativeTime(trimmed);
     if (templated) {
