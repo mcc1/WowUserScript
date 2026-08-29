@@ -331,6 +331,12 @@
         ancestor = ancestor.parentElement;
         if (!(ancestor instanceof Element)) continue;
 
+        const isItemCard =
+          (typeof ancestor.matches === 'function' &&
+            ancestor.matches('[data-testid^="droptimizer-item-"], [data-testid^="item-option-"]')) ||
+          ancestor.classList.contains('DroptimizerRow') ||
+          ancestor.classList.contains('ItemOption');
+
         const links = ancestor.querySelectorAll(WOWHEAD_ITEM_OR_SPELL_LINK);
         const mainLinks = [];
         for (const link of links) {
@@ -343,7 +349,12 @@
         // 如果這個祖先節點內還沒有包含圖示，繼續往上層祖先搜尋
         if (mainLinks.length === 0) continue;
 
-        // 如果這個祖先節點內包含多於 1 個裝備圖示（如好運符/地城總覽清單行），
+        // 如果是已知的單一裝備卡片（可能附帶 1~3 顆插槽寶石），第一個連結永遠是裝備本體！
+        if (isItemCard) {
+          return mainLinks[0];
+        }
+
+        // 如果不是單一卡片，且祖先節點內包含多於 1 個裝備圖示（如好運符/地城總覽清單行），
         // 該列文字為地城/首領名稱，絕對不可關聯！直接返回 null
         if (mainLinks.length > 1) return null;
 

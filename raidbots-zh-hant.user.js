@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.3.1
+// @version      1.3.2
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
 // @match        https://raidbots.com/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.3.1
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.3.2
 // @run-at       document-start
 // @grant        none
 // @license      MIT
