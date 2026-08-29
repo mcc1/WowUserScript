@@ -1,6 +1,6 @@
 /**
  * Wowhead Traditional Chinese Helper Library (WowheadTwHelper)
- * @version 1.5.5
+ * @version 1.6.0
  * @description Shared library for UserScripts to localize Wowhead links, tooltips, and handle SPA dynamic updates safely.
  * @license MIT
  */
@@ -23,7 +23,10 @@
   const TW_LOCALE = 'tw';
   const WOWHEAD_ITEM_OR_SPELL_LINK = 'a[href*="wowhead.com"][href*="item="],a[href*="wowhead.com"][href*="spell="],a[href*="wowhead.com"][href*="currency="],a[href*="wowhead.com"][href*="/item/"],a[href*="wowhead.com"][href*="/spell/"],a[href*="wowhead.com"][href*="/currency/"]';
 
-  // 1. 全域語系與 Wowhead Tooltip 設定（立即執行）
+  // 1. 全域語系與 Wowhead Tooltip 設定
+  //    刻意「不」在函式庫載入時自動執行 —— 呼叫端可能在讀取偏好設定後決定不啟用翻譯，
+  //    若在此處就覆寫 window.Locale / whTooltips，使用者關掉翻譯仍會被強制切成 zh-TW。
+  //    改由 constructor 的 autoInit（預設 true）觸發，或呼叫端自行呼叫靜態方法。
   function setupGlobalLocale() {
     if (typeof window === 'undefined') return;
 
@@ -38,15 +41,6 @@
     window.whTooltips.colorLinks = window.whTooltips.colorLinks !== false;
     window.whTooltips.locale = 'zhtw';
     window.whTooltips.domain = 'tw';
-  }
-
-  setupGlobalLocale();
-
-  function getRectCenter(rect) {
-    return {
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2,
-    };
   }
 
   class WowheadTwHelper {
@@ -74,6 +68,7 @@
 
       this.nonItemNames = new Set();
       this.dungeonKeys = new Set();
+      this.gameNameLookup = null;
       this.wowheadRefreshTimer = null;
       this.wowheadRefreshRetries = 0;
       this.maxWowheadRetries = 30;
@@ -117,6 +112,32 @@
         for (const key of Object.keys(dungeons)) {
           this.dungeonKeys.add(key.trim().toLowerCase());
         }
+      }
+    }
+
+    /**
+     * 註冊遊戲資料（副本／團本／首領）的繁中查表函式。
+     *
+     * 遊戲資料的譯名一律不手寫：由 tools/generate-game-names.mjs 依暴雪官方
+     * Journal API（locale=zh_TW）產生 libs/game-names-tw.js，這裡只接一個
+     * (englishName) => string|null 的查詢函式。
+     *
+     * @param {(englishName: string) => (string|null)} lookup
+     */
+    registerGameNameLookup(lookup) {
+      this.gameNameLookup = typeof lookup === 'function' ? lookup : null;
+    }
+
+    /**
+     * @param {string} englishName
+     * @returns {string|null} 官方繁中名，查不到則為 null
+     */
+    resolveGameName(englishName) {
+      if (!this.gameNameLookup || !englishName) return null;
+      try {
+        return this.gameNameLookup(englishName) || null;
+      } catch (_) {
+        return null;
       }
     }
 
@@ -274,6 +295,8 @@
       const lower = value.toLowerCase();
       if (this.nonItemNames.has(lower)) return false;
       if (this.dungeonKeys.has(lower)) return false;
+      // 副本／團本／首領名稱不是裝備名，避免被誤判成物品而超連結化
+      if (this.resolveGameName(value)) return false;
 
       // 含有中文字元代表已經是繁中，不需再處理
       if (/[\u4e00-\u9fa5]/.test(value)) return false;
@@ -624,6 +647,12 @@
       window.addEventListener('hashchange', () => this.onUrlChange());
     }
   }
+
+  /**
+   * 覆寫 window.Locale / window.whTooltips 為 zh-TW。
+   * 建立實例時（autoInit 預設 true）會自動呼叫，一般不需手動使用。
+   */
+  WowheadTwHelper.setupGlobalLocale = setupGlobalLocale;
 
   return WowheadTwHelper;
 });
