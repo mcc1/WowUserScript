@@ -21,7 +21,7 @@
     'www', 'en', 'de', 'es', 'fr', 'it', 'pt', 'ru', 'ko', 'cn', 'tw',
   ]);
   const TW_LOCALE = 'tw';
-  const WOWHEAD_ITEM_OR_SPELL_LINK = 'a[href*="wowhead.com"][href*="item="],a[href*="wowhead.com"][href*="spell="],a[href*="wowhead.com"][href*="/item/"],a[href*="wowhead.com"][href*="/spell/"]';
+  const WOWHEAD_ITEM_OR_SPELL_LINK = 'a[href*="wowhead.com"][href*="item="],a[href*="wowhead.com"][href*="spell="],a[href*="wowhead.com"][href*="currency="],a[href*="wowhead.com"][href*="/item/"],a[href*="wowhead.com"][href*="/spell/"],a[href*="wowhead.com"][href*="/currency/"]';
 
   // 1. 全域語系與 Wowhead Tooltip 設定（立即執行）
   function setupGlobalLocale() {
@@ -227,7 +227,7 @@
       let touched = false;
       for (const link of links) {
         const href = link.getAttribute('href') || '';
-        if (!/(?:\/item(?:=|\/)|\/spell(?:=|\/))/.test(href)) {
+        if (!/(?:\/item(?:=|\/)|\/spell(?:=|\/)|\/currency(?:=|\/))/.test(href)) {
           continue;
         }
 
@@ -246,9 +246,10 @@
         if (this.options.enableRenameLinks) {
           const isItemLink = /\/item(?:=|\/)/.test(newHref);
           const isSpellLink = /\/spell(?:=|\/)/.test(newHref);
+          const isCurrencyLink = /\/currency(?:=|\/)/.test(newHref);
           const hasText = (link.textContent || '').trim().length > 0;
           const hasImage = link.querySelector('img') !== null;
-          if ((isItemLink || isSpellLink) && hasText && !hasImage && link.dataset.whRenameLink !== 'true') {
+          if ((isItemLink || isSpellLink || isCurrencyLink) && hasText && !hasImage && link.dataset.whRenameLink !== 'true') {
             link.dataset.whRenameLink = 'true';
             link.setAttribute('data-wh-rename-link', 'true');
             touched = true;
@@ -344,10 +345,10 @@
           return link;
         }
 
-        // 支援 Top Gear 等使用 noLink: true 的裝備卡片（從 img.src 提取 itemId）
-        const img = itemCard.querySelector('img[src*="/id/item/"], img[src*="/id/spell/"]');
+        // 支援 Top Gear 等使用 noLink: true 的裝備卡片（從 img.src 提取 itemId/currencyId）
+        const img = itemCard.querySelector('img[src*="/id/item/"], img[src*="/id/spell/"], img[src*="/id/currency/"]');
         if (img) {
-          const m = (img.getAttribute('src') || '').match(/\/id\/(item|spell)\/(\d+)\.png/);
+          const m = (img.getAttribute('src') || '').match(/\/id\/(item|spell|currency)\/(\d+)\.png/);
           if (m) {
             const fakeLink = document.createElement('a');
             fakeLink.setAttribute('href', `//tw.wowhead.com/${m[1]}=${m[2]}`);

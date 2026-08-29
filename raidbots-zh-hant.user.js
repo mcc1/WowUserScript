@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.4.0
+// @version      1.4.1
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
 // @match        https://raidbots.com/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.4.0
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.4.1
 // @run-at       document-start
 // @grant        none
 // @license      MIT
@@ -682,20 +682,57 @@
     "Nature's Fury": '自然之怒',
     "Silvermoon's Alacrity": '銀月敏捷',
     "Zul'jin's Mastery": '祖爾金專精',
+    "Acuity of the Ren'dorei": '昂多雷之敏',
     'Mark of the Worldsoul': '世界之魂印記',
     "Forest Hunter's Armor Kit": '森林獵人護甲片',
     "Stormrider's Armor Kit": '風暴騎兵護甲片',
     "Defender's Armor Kit": '防衛者護甲片',
     'Dual-Flanged Core Drill': '雙凸緣核心鑽',
+    'Authority of the Depths': '深淵權威',
+    'Authority of Fiery Resolve': '熾烈決心權威',
+    'Authority of Radiant Power': '璀璨力量權威',
+    'Authority of Storms': '風暴權威',
+    'Stonebound Artifice': '縛石巧藝',
+    "Oathsworn's Tenacity": '誓約者堅韌',
+    "Council's Guile": '議會狡詐',
+    "Stormrider's Fury": '風暴騎兵之怒',
+    'Spirited Acuity': '靈魂敏銳',
+    'Cursed Critical Strike': '詛咒致命一擊',
+    'Cursed Haste': '詛咒加速',
+    'Cursed Mastery': '詛咒精通',
+    'Cursed Versatility': '詛咒臨機應變',
+    'Radiant Critical Strike': '璀璨致命一擊',
+    'Radiant Haste': '璀璨加速',
+    'Radiant Mastery': '璀璨精通',
+    'Radiant Versatility': '璀璨臨機應變',
+    'Chant of Winged Grace': '翔翼恩典詠唱',
+    'Chant of Armored Leech': '護甲汲取詠唱',
+    'Chant of Armored Avoidance': '護甲迴避詠唱',
+    'Chant of Armored Speed': '護甲速度詠唱',
+    'Chant of Leeching Fangs': '汲取之牙詠唱',
+    'Chant of Burrowing Speed': '潛地速度詠唱',
+    "Cavalry's March": '騎兵行軍',
+    "Scout's March": '斥候行軍',
+    "Defender's March": '防衛者行軍',
     'Bifurcation Band': '分岔之戒',
     'Signet of the Starved Beast': '飢餓狂獸印記',
     "Blood Knight's Warblade": '血騎士戰刃',
     Hunt: '狩獵',
+    "Adventurer's Midcrest": '冒險者午夜紋章',
+    'Adventurer Midcrest': '冒險者午夜紋章',
+    "Veteran's Midcrest": '精兵午夜紋章',
     'Veteran Midcrest': '精兵午夜紋章',
+    "Champion's Midcrest": '勇士午夜紋章',
     'Champion Midcrest': '勇士午夜紋章',
+    "Hero's Midcrest": '英雄午夜紋章',
     'Hero Midcrest': '英雄午夜紋章',
+    "Myth's Midcrest": '神話午夜紋章',
     'Myth Midcrest': '神話午夜紋章',
+    "Weathered's Midcrest": '風化午夜紋章',
     'Weathered Midcrest': '風化午夜紋章',
+    'Carved Midcrest': '雕紋午夜紋章',
+    'Runed Midcrest': '符文午夜紋章',
+    'Gilded Midcrest': '鎏金午夜紋章',
     Voidforged: '卓越虛無鍛造',
     'Voidforged (Hero)': '卓越虛無鍛造（英雄）',
     'Voidforged (Myth)': '卓越虛無鍛造（神話）',
