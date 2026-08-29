@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.5.1
+// @version      1.5.2
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
 // @match        https://raidbots.com/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.5.1
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.5.2
 // @run-at       document-start
 // @grant        none
 // @license      MIT
@@ -656,33 +656,17 @@
     'Shattered Sun (Crit)': '破碎之日（致命）',
     'Blood Knights (Haste)': '血騎士（加速）',
     'Magisters (Mastery)': '博學者（精通）',
-    'Thalassian Resistance (Vers)': '薩拉斯抗性（臨機）',
-    "Draught of Rampant Abandon": '狂放拋棄藥劑',
-    "Light's Potential": '聖光潛能藥水',
-    'Potion of Recklessness': '魯莽藥水',
-    'Potion of Zealotry': '狂熱藥水',
-    "Arcane Mastery": '秘法專精',
-    "Berserker's Rage": '狂戰之怒',
+    'Thalassian Resistance (Vers)': '薩拉斯抗性（臨機）',    "Light's Potential": '聖光潛能藥水',    "Berserker's Rage": '狂戰之怒',
     "Flames of the Sin'dorei": '辛多雷之焰',
     "Jan'alai's Precision": '加亞萊之精準',
-    'Strength of Halazzi': '哈拉齊之力',
-    'Worldsoul Tenacity': '世界之魂堅韌',
-    'Empowered Blessing of Speed': '強化速度祝福',
-    'Empowered Hex of Leeching': '強化汲取咒印',
-    'Empowered Rune of Avoidance': '強化迴避符文',
-    "Akil'zon's Swiftness": '阿奇隆的迅捷',
+    'Strength of Halazzi': '哈拉齊之力',    'Empowered Blessing of Speed': '強化速度祝福',
+    'Empowered Hex of Leeching': '強化汲取咒印',    "Akil'zon's Swiftness": '阿奇隆的迅捷',
     "Amirdrassil's Grace": '阿梅達希爾的恩典',
     "Silvermoon's Mending": '銀月修復',
     'Mark of the Magister': '博學者印記',
     'Arcanoweave Spellthread': '祕法織紋魔線',
     "Farstrider's Hunt": '遠行者狩獵',
-    "Lynx's Dexterity": '山貓敏捷',
-    "Shaladrassil's Roots": '薩拉達希爾之根',
-    'Eyes of the Eagle': '雄鷹之眼',
-    "Nature's Fury": '自然之怒',
-    "Silvermoon's Alacrity": '銀月敏捷',
-    "Zul'jin's Mastery": '祖爾金專精',
-    Hunt: '狩獵',
+    "Lynx's Dexterity": '山貓敏捷',    Hunt: '狩獵',
     "Adventurer's Midcrest": '冒險者迷霧紋章',
     'Adventurer Midcrest': '冒險者迷霧紋章',
     "Veteran's Midcrest": '精兵迷霧紋章',
@@ -697,11 +681,7 @@
     'Weathered Midcrest': '風化迷霧紋章',
     'Carved Midcrest': '雕紋迷霧紋章',
     'Runed Midcrest': '符文迷霧紋章',
-    'Gilded Midcrest': '鎏金迷霧紋章',
-    Voidforged: '卓越虛無鍛造',
-    'Voidforged (Hero)': '卓越虛無鍛造（英雄）',
-    'Voidforged (Myth)': '卓越虛無鍛造（神話）',
-    'Boss Summary': '首領總覽',
+    'Gilded Midcrest': '鎏金迷霧紋章',    'Boss Summary': '首領總覽',
     'Boss Order': '首領順序',
     Sources: '來源',
     'Show Previous Tiers': '顯示先前階段',
