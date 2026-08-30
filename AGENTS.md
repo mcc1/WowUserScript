@@ -18,6 +18,9 @@
 | `raidbots-zh-hant.user.js` | raidbots.com 全站翻譯 + Wowhead 連結修補（最大宗） |
 | `archon-zh-hant.user.js` | archon.gg 翻譯 |
 | `bloodmallet-zh-hant-wowhead.user.js` | bloodmallet.com 翻譯 + zh-hant 語言選項注入 |
+| `keystoneloot-zh-hant.user.js` | keystoneloot.io 翻譯 + Wowhead 連結修補 |
+| `libs/keystoneloot-tw.js` | **site-specific dictionary** — KeystoneLoot 自有 UI 字串 |
+| `docs/keystoneloot-translation-prep.md` | KeystoneLoot 瀏覽器掃描、共用邊界與待驗證項目 |
 | `wowhead-dual-language-title.user.js` | Wowhead 雙語標題 + 中英跨語搜尋（獨立，不使用 helper） |
 
 ## 遊戲資料譯名 — 本專案最重要的一條規則
@@ -282,6 +285,7 @@ node tools/generate-game-names.mjs --self-test   # 產生器模板
 - **raidbots**: Droptimizer 輸入頁 / 結果圖表 / Top Gear 卡片 / Vault 區塊 / 語言選單切換
 - **archon**: build 頁的麵包屑、頁籤、天賦 tooltip
 - **bloodmallet**: `/`（spec table）、`/chart/...`（圖表 + Character profile）、`/settings/general`
+- **KeystoneLoot**: `/en/classes`、`/en/classes/warrior/arms`（職業／專精、站方 UI、裝備連結與 SPA 導航）
 - **wowhead**: 物品頁雙語標題、搜尋框輸入中文與英文
 
 重點確認：**沒有無限迴圈**（observer 改 DOM → 觸發自己）與**沒有把使用者輸入框內容翻掉**。
