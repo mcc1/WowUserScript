@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         KeystoneLoot Traditional Chinese
 // @namespace    https://keystoneloot.io/
-// @version      0.1.0
+// @version      0.2.0
 // @description  Translate KeystoneLoot WoW class pages to Traditional Chinese and patch Wowhead links.
 // @author       mcc
 // @match        https://keystoneloot.io/en/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.7.2
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.7.3
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=2
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/keystoneloot-tw.js?v=1.0.0
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/keystoneloot-zh-hant.user.js
@@ -41,6 +41,37 @@
     } catch (_) {
       return null;
     }
+  }
+
+  function lookupGameName(value) {
+    const table = gameNames();
+    if (!table || typeof table.lookup !== 'function' || !value) return null;
+    try {
+      return table.lookup(value);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function translateGameSource(value) {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return null;
+
+    const direct = lookupGameName(trimmed);
+    if (direct && direct !== trimmed) return direct;
+
+    const sourceMatch = trimmed.match(/^(.+?)\s+(in|from)\s+(.+)$/i);
+    if (!sourceMatch) return null;
+
+    const left = sourceMatch[1].trim();
+    const connector = sourceMatch[2].toLowerCase();
+    const right = sourceMatch[3].trim();
+    const leftTw = lookupGameName(left) || left;
+    const rightTw = lookupGameName(right) || right;
+    if (leftTw === left && rightTw === right) return null;
+
+    const connectorTw = connector === 'in' ? '於' : '來自';
+    return `${leftTw} ${connectorTw} ${rightTw}`;
   }
 
   function translateGameSequence(value) {
@@ -87,6 +118,11 @@
       : exactTwCi[trimmed.toLowerCase()];
     if (exact && exact !== trimmed) {
       return replaceTrimmed(text, trimmed, exact);
+    }
+
+    const gameSource = translateGameSource(trimmed);
+    if (gameSource) {
+      return replaceTrimmed(text, trimmed, gameSource);
     }
 
     const allSpecsMatch = trimmed.match(/^←\s*All\s+(.+?)\s+specs$/i);
@@ -209,7 +245,7 @@
   const helper = typeof window !== 'undefined' && typeof window.WowheadTwHelper !== 'undefined'
     ? new window.WowheadTwHelper({
         enableRenameLinks: true,
-        enableSafeLinkify: false,
+        enableSafeLinkify: true,
         onScan: (root) => {
           translateAttributesInTree(root);
           walkTextNodes(root);
@@ -223,7 +259,7 @@
 
   if (helper) {
     helper.registerNonItemNames(Object.keys(exactTw));
-    helper.registerGameNameLookup(lookupGameUnit);
+    helper.registerGameNameLookup(lookupGameName);
     helper.start();
   }
 })();

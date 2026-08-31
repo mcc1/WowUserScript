@@ -22,16 +22,17 @@
 
 ## 可共用的既有架構
 
-- `libs/game-names-tw.js` 的 `lookupUnit()` 負責職業／專精／英雄天賦的官方繁中名稱；`Warrior`、`Arms`、`Death Knight` 等不可放進本站字典。
+- `libs/game-names-tw.js` 的 `lookupUnit()` 負責職業／專精／英雄天賦，`lookup()` 負責副本／團本／首領的官方繁中名稱；`Warrior`、`Arms`、`Death Knight` 等不可放進本站字典。
 - `libs/wowhead-tw-helper.js` 負責 Wowhead URL 正規化、`data-wowhead` 的 `domain=tw`、`data-wh-rename-link` 與 SPA 的 `MutationObserver`／history 掃描。
 - 掃描到的 Wowhead 物品連結形態為 `https://www.wowhead.com/item=<ID>`，可帶 `bonus`、`original-item`、`gems`、`ench`；連結是純文字 anchor，沒有 `data-wh-rename-link`，也沒有把 `img` 放在同一個 anchor 內。
 - 本次沒有發現可直接共用的「站方 UI 字典」；既有 `EXACT_TW` 是各站專用，因此 KeystoneLoot 另建 `libs/keystoneloot-tw.js`。
 
 ## 實作邊界
 
-- `keystoneloot-zh-hant.user.js` 只處理 KeystoneLoot UI 文字、職業／專精的 generated lookup，以及將頁面上的 Wowhead 連結交給共用 helper/widget。
+- `keystoneloot-zh-hant.user.js` 只處理 KeystoneLoot UI 文字、職業／專精與副本／團本／首領的 generated lookup，以及將頁面上的 Wowhead 連結交給共用 helper/widget。
 - `libs/keystoneloot-tw.js` 只存本站掃描到的 UI 字串與 `DPS`／`TANK`／`HEAL` 角色標籤；不存物品、法術、地城、首領、職業或專精名稱。
 - `← All <Class> specs` 由腳本讀取 URL／DOM 後以 `lookupUnit()` 動態組合，避免把單一職業寫死。
+- 物品、附魔與寶石名稱不手寫；已有 Wowhead 連結的名稱交由 widget 改名，只有未包成連結但鄰近 Wowhead 圖示的名稱才由 helper 的 safe linkify 補上連結後改名。
 
 ## 待瀏覽器實測
 

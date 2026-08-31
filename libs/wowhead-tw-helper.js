@@ -1,6 +1,6 @@
 /**
  * Wowhead Traditional Chinese Helper Library (WowheadTwHelper)
- * @version 1.7.2
+ * @version 1.7.3
  * @description Shared library for UserScripts to localize Wowhead links, tooltips, and handle SPA dynamic updates safely.
  * @license MIT
  */
@@ -22,6 +22,7 @@
   ]);
   const TW_LOCALE = 'tw';
   const WOWHEAD_ITEM_OR_SPELL_LINK = 'a[href*="wowhead.com"][href*="item="],a[href*="wowhead.com"][href*="spell="],a[href*="wowhead.com"][href*="currency="],a[href*="wowhead.com"][href*="/item/"],a[href*="wowhead.com"][href*="/spell/"],a[href*="wowhead.com"][href*="/currency/"]';
+  const LINKIFY_SKIP_SELECTOR = 'script,style,noscript,textarea,input,option,code,pre,kbd,samp,[contenteditable]';
 
   // 1. 全域語系與 Wowhead Tooltip 設定
   //    刻意「不」在函式庫載入時自動執行 —— 呼叫端可能在讀取偏好設定後決定不啟用翻譯，
@@ -610,6 +611,7 @@
         if (!(candidate instanceof Element)) continue;
         if (candidate.childElementCount !== 0) continue;
         if (candidate.closest('a,button,label,textarea,select,[role="button"]')) continue;
+        if (candidate.closest(LINKIFY_SKIP_SELECTOR)) continue;
         if (candidate.closest('h1,h2,h3,h4,h5,h6,thead,th,caption,[role="heading"],[role="columnheader"]')) continue;
         if (this.isInsideExcludedPanel(candidate)) continue;
         if (candidate.classList.contains('Tooltip_box')) continue;
