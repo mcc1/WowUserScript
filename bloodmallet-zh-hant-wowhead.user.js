@@ -6,7 +6,7 @@
 // @author       mcc
 // @match        https://bloodmallet.com/*
 // @match        http://bloodmallet.com/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.7.4
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.7.5
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=2
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/bloodmallet-zh-hant-wowhead.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/bloodmallet-zh-hant-wowhead.user.js

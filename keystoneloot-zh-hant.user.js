@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         KeystoneLoot Traditional Chinese
 // @namespace    https://keystoneloot.io/
-// @version      0.4.0
+// @version      0.4.1
 // @description  Translate KeystoneLoot WoW class pages to Traditional Chinese and patch Wowhead links.
 // @author       mcc
 // @match        https://keystoneloot.io/en/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.7.4
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.7.5
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=2
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/keystoneloot-tw.js?v=1.1.0
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/keystoneloot-zh-hant.user.js
@@ -13,6 +13,7 @@
 // @run-at       document-start
 // @connect      wago.tools
 // @grant        GM_xmlhttpRequest
+// @grant        unsafeWindow
 // @license      MIT
 // ==/UserScript==
 

@@ -1,6 +1,6 @@
 /**
  * Wowhead Traditional Chinese Helper Library (WowheadTwHelper)
- * @version 1.7.4
+ * @version 1.7.5
  * @description Shared library for UserScripts to localize Wowhead links, tooltips, and handle SPA dynamic updates safely.
  * @license MIT
  */
@@ -24,24 +24,30 @@
   const WOWHEAD_ITEM_OR_SPELL_LINK = 'a[href*="wowhead.com"][href*="item="],a[href*="wowhead.com"][href*="spell="],a[href*="wowhead.com"][href*="currency="],a[href*="wowhead.com"][href*="/item/"],a[href*="wowhead.com"][href*="/spell/"],a[href*="wowhead.com"][href*="/currency/"]';
   const LINKIFY_SKIP_SELECTOR = 'script,style,noscript,textarea,input,option,code,pre,kbd,samp,[contenteditable]';
 
+  function getPageWindow() {
+    if (typeof unsafeWindow !== 'undefined') return unsafeWindow;
+    return typeof window !== 'undefined' ? window : globalThis;
+  }
+
   // 1. 全域語系與 Wowhead Tooltip 設定
   //    刻意「不」在函式庫載入時自動執行 —— 呼叫端可能在讀取偏好設定後決定不啟用翻譯，
   //    若在此處就覆寫 window.Locale / whTooltips，使用者關掉翻譯仍會被強制切成 zh-TW。
   //    改由 constructor 的 autoInit（預設 true）觸發，或呼叫端自行呼叫靜態方法。
   function setupGlobalLocale() {
-    if (typeof window === 'undefined') return;
+    const pageWindow = getPageWindow();
+    if (!pageWindow) return;
 
-    window.Locale = {
+    pageWindow.Locale = {
       getId: function () { return 10; },
       getName: function () { return 'zhtw'; },
     };
 
-    if (typeof window.whTooltips === 'undefined') {
-      window.whTooltips = {};
+    if (typeof pageWindow.whTooltips === 'undefined') {
+      pageWindow.whTooltips = {};
     }
-    window.whTooltips.colorLinks = window.whTooltips.colorLinks !== false;
-    window.whTooltips.locale = 'zhtw';
-    window.whTooltips.domain = 'tw';
+    pageWindow.whTooltips.colorLinks = pageWindow.whTooltips.colorLinks !== false;
+    pageWindow.whTooltips.locale = 'zhtw';
+    pageWindow.whTooltips.domain = 'tw';
   }
 
   class WowheadTwHelper {
@@ -83,7 +89,8 @@
       this.syncFlushMaxNodes = 50;
       this.pendingRoots = new Set();
       this.flushTimer = null;
-      this.lastUrl = typeof location !== 'undefined' ? location.href : '';
+      const pageWindow = getPageWindow();
+      this.lastUrl = pageWindow && pageWindow.location ? pageWindow.location.href : '';
       this.observer = null;
       this.isStarted = false;
 
@@ -158,7 +165,8 @@
     toTwWowheadUrl(hrefLike) {
       let url;
       try {
-        url = new URL(hrefLike, typeof window !== 'undefined' ? window.location.href : 'https://www.wowhead.com');
+        const pageWindow = getPageWindow();
+        url = new URL(hrefLike, pageWindow && pageWindow.location ? pageWindow.location.href : 'https://www.wowhead.com');
       } catch (_) {
         return null;
       }
@@ -225,7 +233,7 @@
 
       this.wowheadRefreshTimer = window.setTimeout(() => {
         this.wowheadRefreshTimer = null;
-        const wowheadPower = window.$WowheadPower;
+        const wowheadPower = getPageWindow().$WowheadPower;
         if (wowheadPower && typeof wowheadPower.refreshLinks === 'function') {
           this.wowheadRefreshRetries = 0;
           // power.js 在所有全域功能都關閉時會直接跳過掃描；true 只強制進入
@@ -783,23 +791,24 @@
       }
 
       // SPA 導航攔截
-      const rawPushState = history.pushState.bind(history);
+      const pageWindow = getPageWindow();
+      const rawPushState = pageWindow.history.pushState.bind(pageWindow.history);
       const self = this;
-      history.pushState = function (...args) {
+      pageWindow.history.pushState = function (...args) {
         const result = rawPushState(...args);
         self.onUrlChange();
         return result;
       };
 
-      const rawReplaceState = history.replaceState.bind(history);
-      history.replaceState = function (...args) {
+      const rawReplaceState = pageWindow.history.replaceState.bind(pageWindow.history);
+      pageWindow.history.replaceState = function (...args) {
         const result = rawReplaceState(...args);
         self.onUrlChange();
         return result;
       };
 
-      window.addEventListener('popstate', () => this.onUrlChange());
-      window.addEventListener('hashchange', () => this.onUrlChange());
+      pageWindow.addEventListener('popstate', () => this.onUrlChange());
+      pageWindow.addEventListener('hashchange', () => this.onUrlChange());
     }
   }
 
