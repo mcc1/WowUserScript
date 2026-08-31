@@ -30,10 +30,16 @@
 ## 實作邊界
 
 - `keystoneloot-zh-hant.user.js` 只處理 KeystoneLoot UI 文字、職業／專精與副本／團本／首領的 generated lookup，以及將頁面上的 Wowhead 連結交給共用 helper/widget。
-- `libs/keystoneloot-tw.js` 只存本站掃描到的 UI 字串與 `DPS`／`TANK`／`HEAL` 角色標籤；不存物品、法術、地城、首領、職業或專精名稱。
+- `libs/keystoneloot-tw.js` 只存本站掃描到的 UI／來源標籤與 `DPS`／`TANK`／`HEAL` 角色標籤；不存物品、法術、地城、首領、職業或專精名稱。
 - `← All <Class> specs` 由腳本讀取 URL／DOM 後以 `lookupUnit()` 動態組合，避免把單一職業寫死。
 - 物品、附魔與寶石名稱不手寫；已有 Wowhead 連結的名稱交由 widget 改名，只有未包成連結但鄰近 Wowhead 圖示的名稱才由 helper 的 safe linkify 補上連結後改名。
+- helper 會以 `refreshLinks(true)` 強制進入 Wowhead 的改名掃描，但仍保持全域 `renameLinks`
+  關閉，避免 widget 把同一個連結內的圖示與數據一起替換。KeystoneLoot 另以執行期的
+  Wowhead item ID 配對保存「英文名稱→繁中名稱」，讓說明段落中的同一批物品也能同步更新。
+- 來源列的 `in`／`from` 是獨立文字節點，先註冊為非物品名稱，再由站台腳本翻成「於」／「來自」，避免 safe linkify 把連接詞誤綁到裝備圖示。
 
-## 待瀏覽器實測
+## 瀏覽器實測結果
 
-安裝本地 UserScript 後，需在 `/en/classes`、`/en/classes/warrior/arms` 與至少一次職業／專精 SPA 導航確認：站方 UI 變成正體中文、職業／專精由官方譯名產生、物品名稱由 Wowhead widget 變成繁中，且不改動輸入框或破壞連結內容。
+2026-08-31 已在 `/en/classes/mage/arcane` 實測：站方 UI、標題、屬性、部位、來源、副本／首領、物品／寶石／附魔連結均已翻譯；所有 Wowhead 連結已轉為 `tw.wowhead.com`，圖示仍保留，來源連接詞沒有被誤連結。另確認 `Locale.getId() === 10`、`whTooltips.locale === 'zhtw'`、`whTooltips.domain === 'tw'`。
+
+尚需在實際 userscript manager 安裝後，於 `/en/classes`、`/en/classes/warrior/arms` 與至少一次職業／專精 SPA 導航確認正式載入的 `@require` 快取版本，以及在使用者環境 hover tooltip。

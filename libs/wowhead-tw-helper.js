@@ -1,6 +1,6 @@
 /**
  * Wowhead Traditional Chinese Helper Library (WowheadTwHelper)
- * @version 1.7.3
+ * @version 1.7.4
  * @description Shared library for UserScripts to localize Wowhead links, tooltips, and handle SPA dynamic updates safely.
  * @license MIT
  */
@@ -228,7 +228,9 @@
         const wowheadPower = window.$WowheadPower;
         if (wowheadPower && typeof wowheadPower.refreshLinks === 'function') {
           this.wowheadRefreshRetries = 0;
-          wowheadPower.refreshLinks();
+          // power.js 在所有全域功能都關閉時會直接跳過掃描；true 只強制進入
+          // refresh pass，實際是否改名仍由每條連結的 data-wh-rename-link 決定。
+          wowheadPower.refreshLinks(true);
         } else if (this.wowheadRefreshRetries < this.maxWowheadRetries) {
           this.wowheadRefreshRetries += 1;
           this.queueWowheadRefresh();
