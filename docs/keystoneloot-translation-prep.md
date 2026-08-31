@@ -31,6 +31,7 @@
 
 - `keystoneloot-zh-hant.user.js` 只處理 KeystoneLoot UI 文字、職業／專精與副本／團本／首領的 generated lookup，以及將頁面上的 Wowhead 連結交給共用 helper/widget。
 - `libs/keystoneloot-tw.js` 只存本站掃描到的 UI／來源標籤與 `DPS`／`TANK`／`HEAL` 角色標籤；不存物品、法術、地城、首領、職業或專精名稱。
+- 套裝區塊不建立季節字典：執行期以頁面上的套裝物品 ID 對照 Wago `ItemSet`／`ItemSetSpell` DB2，套裝名稱取 zhTW 欄位，套裝效果再以對應 spell ID 從 Wowhead zhTW tooltip 取得。
 - `← All <Class> specs` 由腳本讀取 URL／DOM 後以 `lookupUnit()` 動態組合，避免把單一職業寫死。
 - 物品、附魔與寶石名稱不手寫；已有 Wowhead 連結的名稱交由 widget 改名，只有未包成連結但鄰近 Wowhead 圖示的名稱才由 helper 的 safe linkify 補上連結後改名。
 - helper 會以 `refreshLinks(true)` 強制進入 Wowhead 的改名掃描，但仍保持全域 `renameLinks`

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         KeystoneLoot Traditional Chinese
 // @namespace    https://keystoneloot.io/
-// @version      0.3.0
+// @version      0.4.0
 // @description  Translate KeystoneLoot WoW class pages to Traditional Chinese and patch Wowhead links.
 // @author       mcc
 // @match        https://keystoneloot.io/en/*
@@ -11,7 +11,8 @@
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/keystoneloot-zh-hant.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/keystoneloot-zh-hant.user.js
 // @run-at       document-start
-// @grant        none
+// @connect      wago.tools
+// @grant        GM_xmlhttpRequest
 // @license      MIT
 // ==/UserScript==
 
@@ -567,6 +568,277 @@
     }, 500);
   }
 
+  const WAGO_ITEM_SET_URL = 'https://wago.tools/db2/ItemSet/csv?locale=zhTW';
+  const WAGO_ITEM_SET_SPELL_URL = 'https://wago.tools/db2/ItemSetSpell/csv?locale=zhTW';
+  const WAGO_CACHE_MAX_AGE = 6 * 60 * 60 * 1000;
+  const wagoCsvPromises = new Map();
+  let tierSectionJobs = new WeakMap();
+  let tierTranslationTimer = null;
+
+  function requestRemoteText(url) {
+    const request = typeof GM_xmlhttpRequest === 'function'
+      ? GM_xmlhttpRequest
+      : (typeof GM !== 'undefined' && typeof GM.xmlHttpRequest === 'function'
+        ? GM.xmlHttpRequest
+        : null);
+
+    if (request) {
+      return new Promise((resolve, reject) => {
+        request({
+          method: 'GET',
+          url,
+          onload(response) {
+            if (response.status >= 200 && response.status < 300) {
+              resolve(response.responseText);
+            } else {
+              reject(new Error(`HTTP ${response.status} for ${url}`));
+            }
+          },
+          onerror() {
+            reject(new Error(`Request failed for ${url}`));
+          },
+          ontimeout() {
+            reject(new Error(`Request timed out for ${url}`));
+          },
+        });
+      });
+    }
+
+    return fetch(url, { credentials: 'omit' }).then((response) => {
+      if (!response.ok) throw new Error(`HTTP ${response.status} for ${url}`);
+      return response.text();
+    });
+  }
+
+  function readWagoCache(cacheKey) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+      if (!cached || typeof cached.text !== 'string' || !Number.isFinite(cached.fetchedAt)) {
+        return null;
+      }
+      if (Date.now() - cached.fetchedAt > WAGO_CACHE_MAX_AGE) return null;
+      return cached.text;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function writeWagoCache(cacheKey, text) {
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({ fetchedAt: Date.now(), text }));
+    } catch (_) {
+      // 儲存空間被停用或已滿時，仍可使用本次的遠端資料。
+    }
+  }
+
+  function loadWagoCsv(url, cacheKey, forceRefresh = false) {
+    if (!forceRefresh) {
+      const cached = readWagoCache(cacheKey);
+      if (cached) return Promise.resolve(cached);
+    }
+
+    if (!forceRefresh && wagoCsvPromises.has(cacheKey)) {
+      return wagoCsvPromises.get(cacheKey);
+    }
+
+    const promise = requestRemoteText(url)
+      .then((text) => {
+        writeWagoCache(cacheKey, text);
+        return text;
+      })
+      .finally(() => {
+        if (wagoCsvPromises.get(cacheKey) === promise) wagoCsvPromises.delete(cacheKey);
+      });
+    wagoCsvPromises.set(cacheKey, promise);
+    return promise;
+  }
+
+  function parseCsv(text) {
+    const rows = [];
+    let row = [];
+    let field = '';
+    let quoted = false;
+
+    for (let index = 0; index < text.length; index += 1) {
+      const character = text[index];
+      if (character === '"') {
+        if (quoted && text[index + 1] === '"') {
+          field += '"';
+          index += 1;
+        } else {
+          quoted = !quoted;
+        }
+      } else if (character === ',' && !quoted) {
+        row.push(field);
+        field = '';
+      } else if ((character === '\n' || character === '\r') && !quoted) {
+        if (character === '\r' && text[index + 1] === '\n') index += 1;
+        row.push(field);
+        if (row.some((value) => value !== '')) rows.push(row);
+        row = [];
+        field = '';
+      } else {
+        field += character;
+      }
+    }
+
+    if (field || row.length) {
+      row.push(field);
+      if (row.some((value) => value !== '')) rows.push(row);
+    }
+
+    if (!rows.length) return [];
+    const headers = rows.shift().map((header) => header.replace(/^\uFEFF/, ''));
+    return rows.map((values) => Object.fromEntries(
+      headers.map((header, index) => [header, values[index] || ''])
+    ));
+  }
+
+  function getPageItemIds() {
+    const itemIds = new Set();
+    for (const link of document.querySelectorAll('a[href*="wowhead.com"]')) {
+      const match = link.getAttribute('href').match(/(?:^|\/)(?:item=|item\/)(\d+)/i);
+      if (match) itemIds.add(match[1]);
+    }
+    return itemIds;
+  }
+
+  function findItemSetRecord(records, itemIds) {
+    let best = null;
+    for (const record of records) {
+      const itemFields = Object.keys(record).filter((key) => /^ItemID_\d+$/.test(key));
+      const matches = itemFields.filter((key) => itemIds.has(record[key])).length;
+      if (matches < 2 || (best && matches <= best.matches)) continue;
+      best = { record, matches };
+    }
+    return best ? best.record : null;
+  }
+
+  function getCurrentSpecSlug() {
+    const parts = location.pathname.split('/').filter(Boolean);
+    const classesIndex = parts.indexOf('classes');
+    return classesIndex >= 0 ? parts[classesIndex + 2] || '' : '';
+  }
+
+  function spellMatchesCurrentSpec(name) {
+    const specSlug = getCurrentSpecSlug();
+    if (!specSlug) return false;
+    const spellName = String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+    return specSlug.split('-').filter(Boolean).every((word) => spellName.includes(word));
+  }
+
+  async function fetchLocalizedSpell(spellId) {
+    const response = await fetch(
+      `https://nether.wowhead.com/tooltip/spell/${spellId}?dataEnv=1&locale=10`,
+      { credentials: 'omit' }
+    );
+    if (!response.ok) throw new Error(`HTTP ${response.status} for spell ${spellId}`);
+    const data = await response.json();
+    const tooltipDocument = new DOMParser().parseFromString(data.tooltip || '', 'text/html');
+    const description = Array.from(tooltipDocument.querySelectorAll('.q'))
+      .map((element) => element.textContent.replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+      .join(' ');
+    return { name: data.name || '', description };
+  }
+
+  async function resolveTierSetData(itemIds) {
+    let itemSetCsv = await loadWagoCsv(
+      WAGO_ITEM_SET_URL,
+      'WowUserScript:KeystoneLoot:ItemSet:zhTW'
+    );
+    let itemSet = findItemSetRecord(parseCsv(itemSetCsv), itemIds);
+
+    // 新賽季可能剛在 Wago 更新；找不到頁面上的套裝物品時，立即跳過短期快取重抓一次。
+    if (!itemSet) {
+      itemSetCsv = await loadWagoCsv(
+        WAGO_ITEM_SET_URL,
+        'WowUserScript:KeystoneLoot:ItemSet:zhTW',
+        true
+      );
+      itemSet = findItemSetRecord(parseCsv(itemSetCsv), itemIds);
+    }
+    if (!itemSet) return null;
+
+    let itemSetSpellCsv = await loadWagoCsv(
+      WAGO_ITEM_SET_SPELL_URL,
+      'WowUserScript:KeystoneLoot:ItemSetSpell:zhTW'
+    );
+    let spellRecords = parseCsv(itemSetSpellCsv)
+      .filter((record) => record.ItemSetID === itemSet.ID && ['2', '4'].includes(record.Threshold));
+
+    if (!spellRecords.length) {
+      itemSetSpellCsv = await loadWagoCsv(
+        WAGO_ITEM_SET_SPELL_URL,
+        'WowUserScript:KeystoneLoot:ItemSetSpell:zhTW',
+        true
+      );
+      spellRecords = parseCsv(itemSetSpellCsv)
+        .filter((record) => record.ItemSetID === itemSet.ID && ['2', '4'].includes(record.Threshold));
+    }
+
+    const spells = await Promise.all(spellRecords.map(async (record) => {
+      try {
+        const localized = await fetchLocalizedSpell(record.SpellID);
+        return { threshold: record.Threshold, ...localized };
+      } catch (_) {
+        return null;
+      }
+    }));
+    const currentSpecSpells = spells.filter((spell) => spell && spellMatchesCurrentSpec(spell.name));
+
+    return {
+      itemSetId: itemSet.ID,
+      name: itemSet.Name_lang,
+      effects: currentSpecSpells
+        .filter((spell) => spell.description)
+        .map((spell) => ({ threshold: spell.threshold, description: spell.description })),
+    };
+  }
+
+  function findTierSetSections() {
+    return Array.from(document.querySelectorAll('section')).filter((section) => {
+      const heading = section.querySelector('h2');
+      return heading && ['Tier set', '套裝'].includes(heading.textContent.trim())
+        && section.querySelectorAll('dl > div > dd').length > 0;
+    });
+  }
+
+  function applyTierSetData(section, data) {
+    const nameElement = section.querySelector('p');
+    if (nameElement && data.name) nameElement.textContent = data.name;
+
+    const effects = new Map(data.effects.map((effect) => [effect.threshold, effect.description]));
+    for (const card of section.querySelectorAll('dl > div')) {
+      const threshold = card.querySelector('dt')?.textContent.match(/\d+/)?.[0];
+      const description = effects.get(threshold);
+      const descriptionElement = card.querySelector('dd');
+      if (description && descriptionElement) descriptionElement.textContent = description;
+    }
+    section.dataset.twTierSetId = data.itemSetId;
+  }
+
+  function scheduleTierSetTranslation() {
+    if (tierTranslationTimer !== null) return;
+    tierTranslationTimer = window.setTimeout(() => {
+      tierTranslationTimer = null;
+      const itemIds = getPageItemIds();
+      if (itemIds.size < 2) return;
+
+      for (const section of findTierSetSections()) {
+        if (tierSectionJobs.has(section)) continue;
+        const job = resolveTierSetData(itemIds)
+          .then((data) => {
+            if (data && section.isConnected) applyTierSetData(section, data);
+          })
+          .catch(() => {
+            // 遠端資料暫時不可用時，保留網站原文，不影響其他翻譯。
+          });
+        tierSectionJobs.set(section, job);
+      }
+    }, 0);
+  }
+
   const helper = typeof window !== 'undefined' && typeof window.WowheadTwHelper !== 'undefined'
     ? new window.WowheadTwHelper({
         enableRenameLinks: true,
@@ -586,9 +858,11 @@
           scheduleWowheadNameRescan();
           translateSourceConnectors(root);
           translateDocumentTitle();
+          scheduleTierSetTranslation();
         },
         onUrlChange: () => {
           translatedNodeText = new WeakMap();
+          tierSectionJobs = new WeakMap();
         },
       })
     : null;
