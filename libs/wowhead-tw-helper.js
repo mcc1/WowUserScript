@@ -1,6 +1,6 @@
 /**
  * Wowhead Traditional Chinese Helper Library (WowheadTwHelper)
- * @version 1.7.5
+ * @version 1.8.1
  * @description Shared library for UserScripts to localize Wowhead links, tooltips, and handle SPA dynamic updates safely.
  * @license MIT
  */
@@ -23,6 +23,8 @@
   const TW_LOCALE = 'tw';
   const WOWHEAD_ITEM_OR_SPELL_LINK = 'a[href*="wowhead.com"][href*="item="],a[href*="wowhead.com"][href*="spell="],a[href*="wowhead.com"][href*="currency="],a[href*="wowhead.com"][href*="/item/"],a[href*="wowhead.com"][href*="/spell/"],a[href*="wowhead.com"][href*="/currency/"]';
   const LINKIFY_SKIP_SELECTOR = 'script,style,noscript,textarea,input,option,code,pre,kbd,samp,[contenteditable]';
+  const INTERACTIVE_MENU_SELECTOR = '.DropdownMenu,[role="menu"],[role="listbox"]';
+  const ITEM_CARD_SELECTOR = '[data-test="actor-compare-row"], [data-testid^="droptimizer-item-"], [data-testid^="item-option-"], .DroptimizerRow, .ItemOption, [class*="droptimizerItem"], [class*="DroptimizerRow"], div.item, [id$="/item"]';
 
   function getPageWindow() {
     if (typeof unsafeWindow !== 'undefined') return unsafeWindow;
@@ -56,6 +58,7 @@
      * @param {boolean} [options.autoInit=true] - 自動初始化環境
      * @param {boolean} [options.enableRenameLinks=true] - 自動為符合條件的連結加上 data-wh-rename-link="true"
      * @param {boolean} [options.enableSafeLinkify=false] - 是否開啟純文字裝備名稱自動超連結化
+     * @param {boolean} [options.enableTextOnlyRename=false] - 是否只翻譯純文字裝備名稱，不建立可點擊連結（與 enableSafeLinkify 擇一）
      * @param {boolean} [options.enableIconLinkRename=false] - 用探針翻譯「圖示與名稱同在一個連結內」的情況
      * @param {boolean} [options.syncSmallMutations=false] - 小批變動同步翻譯，消除站方重繪造成的閃爍
      * @param {string[]} [options.excludedPanelKeywords] - 面板標題排除關鍵字（預設包含 summary, 總覽 等）
@@ -68,6 +71,7 @@
           autoInit: true,
           enableRenameLinks: true,
           enableSafeLinkify: false,
+          enableTextOnlyRename: false,
           enableIconLinkRename: false,
           syncSmallMutations: false,
           excludedPanelKeywords: ['summary', '總覽', 'bonus roll', '好運符', 'boss summary', 'dungeon summary'],
@@ -84,6 +88,7 @@
       this.wowheadRefreshRetries = 0;
       this.maxWowheadRetries = 30;
       this.maxRenameProbeAttempts = 20;
+      this.textRenameClaims = new WeakMap();
       // 一批變動帶進來多少節點以內算「小批」，可以同步處理。實測 archon 的 hover
       // 重繪是 10 個文字節點；路由切換帶進來的是整個頁面，遠遠超過。
       this.syncFlushMaxNodes = 50;
@@ -317,7 +322,7 @@
         document.body.appendChild(probe);
 
         link.dataset.twIconRenamed = 'true';
-        jobs.push({ link: link, nameNode: nameNode, probe: probe, original: original });
+        jobs.push({ link: link, target: nameNode, probe: probe, original: original });
       }
 
       if (!jobs.length) return;
@@ -338,11 +343,21 @@
         for (const job of jobs) {
           const renamed = (job.probe.textContent || '').trim();
 
+          const target = job.target;
           if (renamed && renamed !== job.original) {
-            if (job.nameNode.textContent.indexOf(job.original) !== -1) {
-              job.nameNode.textContent = job.nameNode.textContent.replace(job.original, renamed);
+            if (target && target.isConnected && target.textContent.indexOf(job.original) !== -1) {
+              target.textContent = target.textContent.replace(job.original, renamed);
             }
             job.probe.remove();
+            if (job.nameElement) {
+              delete job.nameElement.dataset.twWowheadRenaming;
+              job.nameElement.dataset.twWowheadTextRenameSource = job.original;
+              job.nameElement.dataset.twWowheadTextRenameResult = renamed;
+            }
+            if (job.claim) {
+              job.claim.pending = false;
+              job.claim.translated = renamed;
+            }
           } else {
             pending.push(job);
           }
@@ -355,9 +370,153 @@
 
         for (const job of pending) {
           job.probe.remove();
-          delete job.link.dataset.twIconRenamed;  // 下一輪掃描可以再試
+          if (job.link) delete job.link.dataset.twIconRenamed;
+          if (job.nameElement) delete job.nameElement.dataset.twWowheadRenaming;
+          if (job.card && job.claim && job.claimSet) {
+            job.claimSet.delete(job.claim);
+            if (!job.claimSet.size) {
+              const claims = this.textRenameClaims.get(job.card);
+              if (claims && claims.get(job.twHref) === job.claimSet) claims.delete(job.twHref);
+            }
+          }
         }
       }, 250);
+    }
+
+    /**
+     * 翻譯站方刻意不提供連結的純文字物品名稱。
+     *
+     * Raidbots 的 Top Gear 與 Droptimizer 會在部分卡片上使用 noLink: true：
+     * 圖示可以觸發 Wowhead tooltip，但名稱本身不是可點擊連結。這裡沿用
+     * 隱藏 probe 取得 Wowhead 的繁中名稱，只回寫原文字節點，不改變站方互動。
+     * @param {Document|Element} root
+     */
+    renameTextOnlyNamesByProbe(root = document) {
+      if (!this.options.enableTextOnlyRename || !document.body) return;
+
+      const scope = root && root.querySelectorAll ? root : document;
+      const candidates = [];
+      if (scope.matches && scope.matches('p,span,div')) {
+        candidates.push(scope);
+      }
+      for (const node of scope.querySelectorAll('p,span,div')) {
+        candidates.push(node);
+      }
+
+      const jobs = [];
+      for (const candidate of candidates) {
+        if (!(candidate instanceof Element)) continue;
+        if (candidate.childElementCount !== 0) continue;
+        if (candidate.closest('a,button,label,textarea,select,[role="button"]')) continue;
+        if (candidate.closest(LINKIFY_SKIP_SELECTOR)) continue;
+        if (candidate.closest('h1,h2,h3,h4,h5,h6,thead,th,caption,[role="heading"],[role="columnheader"]')) continue;
+        if (this.isInsideExcludedPanel(candidate)) continue;
+        if (candidate.classList.contains('Tooltip_box')) continue;
+        if (candidate.dataset.twWowheadRenaming === 'true') continue;
+
+        const original = (candidate.textContent || '').trim();
+        if (!this.isLikelyItemOrEnchantName(original)) continue;
+        if (/[:：]\s*$/.test(original)) continue;
+
+        if (candidate.dataset.twWowheadTextRenameResult === original) continue;
+
+        const itemCard = candidate.closest(ITEM_CARD_SELECTOR);
+        const iconLink = this.findNearestWowheadIconLink(candidate);
+        if (!iconLink) continue;
+
+        // Raidbots 的 Copy/Modify 選單同時包含主裝備、紋章與其他成本列。
+        // 只有列內自己的圖示才是安全來源；若探針跨出選單抓到外層主裝備，
+        // 就保留站方原文，避免所有成本列被改成同一件裝備。
+        const menu = candidate.closest(INTERACTIVE_MENU_SELECTOR);
+        if (menu && !menu.contains(iconLink)) continue;
+
+        const twHref = this.toTwWowheadUrl(iconLink.getAttribute('href') || '');
+        if (!twHref || !/\/(?:item|spell|currency)(?:=|\/)/.test(twHref)) continue;
+
+        const isSyntheticIcon = Boolean(itemCard && !iconLink.isConnected);
+        if (isSyntheticIcon) {
+          // 沒有可用 Wowhead anchor 時只能從圖示 URL 猜來源；卡片內有多個
+          // 圖示就無法安全知道文字屬於哪一件物品，寧可保留原文也不誤翻。
+          const itemImages = itemCard.querySelectorAll(
+            'img[src*="/id/item/"], img[src*="/id/spell/"], img[src*="/id/currency/"]'
+          );
+          if (itemImages.length !== 1) continue;
+        }
+
+        let claim = null;
+        let claimSet = null;
+        if (itemCard) {
+          let claims = this.textRenameClaims.get(itemCard);
+          if (!claims) {
+            claims = new Map();
+            this.textRenameClaims.set(itemCard, claims);
+          }
+
+          claimSet = claims.get(twHref);
+          if (!claimSet) {
+            claimSet = new Set();
+            claims.set(twHref, claimSet);
+          }
+
+          let existingCandidateClaim = null;
+          for (const oldClaim of Array.from(claimSet)) {
+            const ownerText = oldClaim.target && oldClaim.target.isConnected
+              ? (oldClaim.target.textContent || '').trim()
+              : '';
+            if (!oldClaim.target || !oldClaim.target.isConnected) {
+              claimSet.delete(oldClaim);
+            } else if (oldClaim.target === candidate) {
+              if (
+                (oldClaim.pending && ownerText === oldClaim.original)
+                || (!oldClaim.pending && ownerText === oldClaim.translated)
+              ) {
+                existingCandidateClaim = oldClaim;
+                break;
+              }
+              claimSet.delete(oldClaim);
+            }
+          }
+          if (existingCandidateClaim) continue;
+          if (!claimSet.size) {
+            claims.delete(twHref);
+            claimSet = null;
+          }
+          if (isSyntheticIcon && claimSet && claimSet.size) continue;
+        }
+
+        const probe = document.createElement('a');
+        probe.setAttribute('href', twHref);
+        probe.setAttribute('data-wh-rename-link', 'true');
+        probe.dataset.whRenameLink = 'true';
+        probe.textContent = original;
+
+        const dataWowhead = iconLink.getAttribute('data-wowhead');
+        if (dataWowhead) {
+          probe.setAttribute('data-wowhead', dataWowhead);
+          this.applyTwDomainToDataWowhead(probe);
+        }
+
+        // 不能用 display:none —— widget 會略過不算數的節點。移到畫面外即可。
+        probe.style.cssText =
+          'position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;';
+        document.body.appendChild(probe);
+
+        candidate.dataset.twWowheadRenaming = 'true';
+        if (itemCard) {
+          claim = { target: candidate, original: original, translated: '', pending: true };
+          if (!claimSet) {
+            claimSet = new Set();
+            this.textRenameClaims.get(itemCard).set(twHref, claimSet);
+          }
+          claimSet.add(claim);
+        }
+        jobs.push({ nameElement: candidate, card: itemCard, claim: claim, claimSet: claimSet, target: candidate, probe: probe, original: original, twHref: twHref });
+      }
+
+      if (!jobs.length) return;
+
+      this.queueWowheadRefresh();
+      this.collectRenameProbes(jobs, 0);
     }
 
     /**
@@ -435,6 +594,7 @@
       if (/[\u4e00-\u9fa5]/.test(value)) return false;
       if (!/[A-Za-z]/.test(value)) return false;
       if (/[<>{}\\]/.test(value)) return false;
+      if (/^(?:upgrade(?:\s+cost)?|crafting\s+quality(?:\s+\d+)?)[:：]?$/i.test(value)) return false;
 
       // 全大寫短代碼是介面徽章（raidbots 疊在裝備圖示上的 CAT / UPG / GV / MOD…），
       // 不是裝備名 —— 真正的裝備名一定含小寫字母。若不擋掉，徽章會被 linkify 成物品
@@ -482,7 +642,59 @@
      * @returns {HTMLAnchorElement|null}
      */
     findNearestWowheadIconLink(textElement) {
-      // 0. 超優先：檢查文字節點直接同層或直接父容器內緊鄰的專屬圖示（例如附魔卷軸、特定法術/通貨圖示）
+      // 0. 記住明確的物品卡片／報告列。Raidbots 催化列會同時放主物品圖示
+      // 與原始掉落物的小圖示，稍後會讓卡片內的第一個有效連結優先。
+      const itemCard =
+        typeof textElement.closest === 'function'
+          ? textElement.closest(
+              ITEM_CARD_SELECTOR
+            )
+          : null;
+
+      const findCardLink = (card) => {
+        const links = [];
+        for (const link of card.querySelectorAll(WOWHEAD_ITEM_OR_SPELL_LINK)) {
+          if (!(link instanceof HTMLAnchorElement)) continue;
+          if (link.contains(textElement) || textElement.contains(link)) continue;
+          if (link.dataset.twWowheadLinked === 'true') continue;
+          links.push(link);
+        }
+
+        // Catalyst／轉化列會同時有原始掉落物與轉化後的主物品連結。
+        // `original-item=` 是掛在主物品 URL 上的來源指標，不是要選取的 ID；
+        // 優先選它，不能只依賴 DOM 目前的排列順序。
+        const transformedLink = links.find((link) => {
+          const href = link.getAttribute('href') || '';
+          const dataWowhead = link.getAttribute('data-wowhead') || '';
+          return /(?:[?&])original-item=\d+/i.test(href) || /(?:^|&)original-item=\d+/i.test(dataWowhead);
+        });
+        if (transformedLink) return transformedLink;
+
+        // 沒有轉化來源標記時，維持站方物品卡片的既有順序：第一個有效
+        // Wowhead 連結是裝備本體，後續才是鑲嵌的插槽寶石。
+        if (links.length) return links[0];
+
+        // 支援 Top Gear 等使用 noLink: true 的裝備卡片（從 img.src 提取 itemId/currencyId）
+        const img = card.querySelector('img[src*="/id/item/"], img[src*="/id/spell/"], img[src*="/id/currency/"]');
+        if (img) {
+          const m = (img.getAttribute('src') || '').match(/\/id\/(item|spell|currency)\/(\d+)\.png/);
+          if (m) {
+            const fakeLink = document.createElement('a');
+            fakeLink.setAttribute('href', `//tw.wowhead.com/${m[1]}=${m[2]}`);
+            return fakeLink;
+          }
+        }
+        return null;
+      };
+
+      // 報告列會同時有主物品與原始掉落物圖示；先取卡片內的主物品連結。
+      if (itemCard && itemCard.matches('[data-test="actor-compare-row"]')) {
+        const cardLink = findCardLink(itemCard);
+        if (cardLink) return cardLink;
+      }
+
+      // 1. 檢查文字節點直接同層或直接父容器內緊鄰的專屬圖示（例如附魔卷軸、
+      // 特定法術/通貨圖示）；非 Raidbots 報告列維持既有的近鄰優先行為。
       const immediateParent = textElement.parentElement;
       if (immediateParent instanceof Element) {
         const directImg = immediateParent.querySelector('img[src*="/id/item/"], img[src*="/id/spell/"], img[src*="/id/currency/"]');
@@ -500,37 +712,13 @@
         }
       }
 
-      // 1. 優先透過 closest 判定是否位於明確的單一裝備卡片/行中（支援帶插槽寶石與 noLink: true 的裝備）
-      const itemCard =
-        typeof textElement.closest === 'function'
-          ? textElement.closest(
-              '[data-testid^="droptimizer-item-"], [data-testid^="item-option-"], .DroptimizerRow, .ItemOption, [class*="droptimizerItem"], [class*="DroptimizerRow"], div.item, [id$="/item"]'
-            )
-          : null;
-
+      // 2. 其他明確物品卡片（支援帶插槽寶石與 noLink: true 的裝備）
       if (itemCard) {
-        const links = itemCard.querySelectorAll(WOWHEAD_ITEM_OR_SPELL_LINK);
-        for (const link of links) {
-          if (!(link instanceof HTMLAnchorElement)) continue;
-          if (link.contains(textElement) || textElement.contains(link)) continue;
-          if (link.dataset.twWowheadLinked === 'true') continue;
-          // 單一卡片內的第一個有效 Wowhead 連結必為裝備本體（後續為鑲嵌的插槽寶石）
-          return link;
-        }
-
-        // 支援 Top Gear 等使用 noLink: true 的裝備卡片（從 img.src 提取 itemId/currencyId）
-        const img = itemCard.querySelector('img[src*="/id/item/"], img[src*="/id/spell/"], img[src*="/id/currency/"]');
-        if (img) {
-          const m = (img.getAttribute('src') || '').match(/\/id\/(item|spell|currency)\/(\d+)\.png/);
-          if (m) {
-            const fakeLink = document.createElement('a');
-            fakeLink.setAttribute('href', `//tw.wowhead.com/${m[1]}=${m[2]}`);
-            return fakeLink;
-          }
-        }
+        const cardLink = findCardLink(itemCard);
+        if (cardLink) return cardLink;
       }
 
-      // 2. 常規向上回溯祖先（用於無特定 class 的自訂表格/圖表視圖）
+      // 3. 常規向上回溯祖先（用於無特定 class 的自訂表格/圖表視圖）
       let ancestor = textElement;
       for (let depth = 0; depth < 5 && ancestor; depth += 1) {
         ancestor = ancestor.parentElement;
@@ -603,7 +791,7 @@
      * @returns {boolean}
      */
     linkifyNearbyItemNames(root = document) {
-      if (!this.options.enableSafeLinkify) return false;
+      if (!this.options.enableSafeLinkify || this.options.enableTextOnlyRename) return false;
 
       const scope = root instanceof Document ? root.body : root;
       if (!(scope instanceof Element)) return false;
@@ -669,12 +857,20 @@
       for (const root of roots) {
         if (!document.body || !document.contains(root)) continue;
 
-        if (this.linkifyNearbyItemNames(root)) {
-          linkifyTouched = true;
-        }
-
-        if (typeof this.options.onScan === 'function') {
-          this.options.onScan(root);
+        if (this.options.enableTextOnlyRename) {
+          // 先翻譯站方自己的徽章／標籤，再尋找仍是英文的純文字物品名；
+          // 否則像 UPG、Upgrade cost 等同卡片文字可能搶先被當成物品名稱。
+          if (typeof this.options.onScan === 'function') {
+            this.options.onScan(root);
+          }
+          this.renameTextOnlyNamesByProbe(root);
+        } else {
+          if (this.linkifyNearbyItemNames(root)) {
+            linkifyTouched = true;
+          }
+          if (typeof this.options.onScan === 'function') {
+            this.options.onScan(root);
+          }
         }
 
         this.patchWowheadLinks(root);

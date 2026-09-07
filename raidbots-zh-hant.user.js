@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.7.0
+// @version      1.7.1
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
 // @match        https://raidbots.com/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.7.5
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.8.1
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=2
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/raidbots-zh-hant.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/raidbots-zh-hant.user.js
@@ -1203,7 +1203,7 @@
   const whHelper = typeof WowheadTwHelper !== 'undefined'
     ? new WowheadTwHelper({
         enableRenameLinks: true,
-        enableSafeLinkify: true,
+        enableTextOnlyRename: true,
         excludedPanelKeywords: ['summary', '總覽', 'bonus roll', '好運符', 'boss summary', 'dungeon summary'],
         onScan: (root) => {
           translateAttributesInTree(root);
