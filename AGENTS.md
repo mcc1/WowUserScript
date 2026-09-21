@@ -135,6 +135,19 @@ archon 是**換掉節點**，不是改文字。查這類問題時 `childList`、
 `attributes` 三種要一起收，而且要記 `characterDataOldValue`，否則分不出哪一筆是
 站方寫的、哪一筆是自己寫的。
 
+#### `refreshLinks(true)` 不是免費的：只在動到連結時才叫
+
+widget 的強制重掃會把頁面上**每一條**連結重新改名、重新掛圖示，每條各產生一次
+childList + attributes 變動。如果 `queueWowheadRefresh()` 掛在「每次 DOM 變動」的
+路徑上（onScan、自己開的 MutationObserver），就是一個自我維持的迴圈：重掃 → 65 條
+連結變動 → observer → 再重掃。bloodmallet 實測每秒 8～27 輪，滑鼠下的連結不斷被
+換掉，Wowhead tooltip 跟著閃（使用者回報「tooltip 會閃爍」，2026-09-21）。
+
+規則：呼叫端只在自己**真的改了**連結（href 換成 tw、補上 `data-wowhead` domain、
+新掛 `data-wh-rename-link`）時才排程重掃；helper 的 `patchWowheadLinks` 本來就是
+這樣做的（`touched` 才 queue）。查這類問題的方法：在 body 上掛一個 MutationObserver
+數 4 秒閒置時的變動數，正常應該是 0。
+
 #### 為什麼有些連結不能直接掛 `data-wh-rename-link`
 
 Wowhead widget 改名的方式是**把整個 `innerHTML` 換成 `<span>名稱</span>`**。連結裡如果

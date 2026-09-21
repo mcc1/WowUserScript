@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bloodmallet Traditional Chinese Wowhead
 // @namespace    https://bloodmallet.com/
-// @version      0.10.0
+// @version      0.10.1
 // @description  Add zh-hant mode, switch item links/names to the zh-hant Wowhead locale, and translate class/spec labels.
 // @author       mcc
 // @match        https://bloodmallet.com/*
@@ -379,6 +379,7 @@
     }
 
     // 2. 翻譯未填充物品時的部位佔位文字與已有裝備圖示
+    let linksTouched = false;
     for (const id of CHARACTER_PROFILE_SLOT_IDS) {
       const el = document.getElementById(id);
       if (!el) continue;
@@ -395,11 +396,13 @@
           const twHref = helper.toTwWowheadUrl(href);
           if (twHref && href !== twHref) {
             link.setAttribute('href', twHref);
+            linksTouched = true;
           }
-          helper.applyTwDomainToDataWowhead(link);
+          if (helper.applyTwDomainToDataWowhead(link)) linksTouched = true;
           if (link.dataset.whRenameLink !== 'true') {
             link.dataset.whRenameLink = 'true';
             link.setAttribute('data-wh-rename-link', 'true');
+            linksTouched = true;
           }
         }
       }
@@ -420,7 +423,12 @@
       }
     }
 
-    if (helper) {
+    // 只在真的動到連結時才叫 widget 重掃。這個函式掛在每次 DOM 變動上，而
+    // refreshLinks(true) 會把頁面上每一條連結重新改名、重新掛圖示（每條各一次
+    // childList + attributes 變動）——無條件叫它就是一個自我維持的迴圈：
+    // 重掃 → 65 條連結變動 → observer → 這裡 → 再重掃，實測每秒 8～27 輪，
+    // 滑鼠下的連結不斷被換掉，tooltip 就跟著閃。
+    if (helper && linksTouched) {
       helper.queueWowheadRefresh();
     }
   }
