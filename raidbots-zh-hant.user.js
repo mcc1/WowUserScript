@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.7.1
+// @version      1.7.2
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
@@ -211,6 +211,31 @@
     Options: '選項',
     'Quick Nav:': '快速導覽：',
     'Load from SimC Addon': '從 SimC 插件載入',
+    // 2026-09 站方把角色來源改成分頁：Quick / SimC Addon / Armory / History
+    'Quick': '快速',
+    'SimC Addon': 'SimC 插件',
+    'Armory': '戰網檔案',
+    'History': '歷史紀錄',
+    'No character loaded': '尚未載入角色',
+    // 「Paste input from the <a>SimulationCraft</a> addon.」被連結切成兩段
+    'Paste input from the': '貼上來自',
+    'addon.': '插件的輸入。',
+    'Share Setup': '分享設定',
+    'Create an account to save reports': '建立帳號以儲存報表',
+    'Load your character from the Armory or SimC addon above': '請先從上方的戰網檔案或 SimC 插件載入角色',
+    // 報表頁：站方把數字拆成獨立文字節點，整句字典比不到，只能翻剩下的碎片
+    '« Back to': '« 返回',
+    'boss target': '個首領目標',
+    'boss targets': '個首領目標',
+    'DPS compared to your current gear. Highlighted icons indicate': '與目前裝備相比的 DPS。高亮圖示代表',
+    '% or better DPS increase.': '% 以上的 DPS 提升。',
+    'Equipped gear was upgraded to the same level when possible': '已在可行時將已裝備的裝備升級至相同等級',
+    'Show Full Tree': '顯示完整天賦樹',
+    'Bonus Rolls': '好運符',
+    // 免責聲明被 <a>dive into SimulationCraft</a> 切成三段，逐段翻
+    'Results are only as good as the SimulationCraft model for your spec! Check other trusted sources to figure out if your spec is well supported and/or': '結果的準確度取決於 SimulationCraft 對你專精的模型！請參考其他可信來源確認你的專精是否有良好支援，也可以',
+    'dive into SimulationCraft': '深入 SimulationCraft',
+    'itself and get involved!': '本身並參與貢獻！',
     'Copy/paste the text from the SimulationCraft addon.': '貼上 SimulationCraft 插件輸出文字。',
     'How to install and use the SimC addon': '如何安裝與使用 SimC 插件',
     'Selection deleted': '已刪除選擇',
@@ -434,6 +459,10 @@
     'Off Hand Weapon': '副手武器',
     FINGER: '手指',
     Finger: '手指',
+    // Droptimizer 卡片會在物品等級旁標出「Finger 2」這種替換部位；不在字典裡就
+    // 不會被登記為非物品名稱，純文字改名探針會把它當成物品名換成戒指名。
+    'Finger 1': '手指 1',
+    'Finger 2': '手指 2',
     Trinket: '飾品',
     'Trinket 1': '飾品 1',
     'Trinket 2': '飾品 2',
@@ -860,6 +889,28 @@
     if (hotfixMatch) {
       const dateTw = translateDate(hotfixMatch[1]);
       return replaceTrimmed(text, trimmed, `Raidbots 已更新至最新的 ${dateTw} 線上修正`);
+    }
+
+    // 報表標題是站方用「 • 」串起來的：Droptimizer • Bonus Rolls • Heroic + M10 • Myth 6/6
+    if (trimmed.includes(' • ')) {
+      let changed = false;
+      const pieces = trimmed.split(' • ').map((piece) => {
+        const pieceTw = EXACT_TW[piece] || EXACT_TW_CI[piece.toLowerCase()];
+        if (pieceTw) {
+          changed = true;
+          return pieceTw;
+        }
+        const difficultyMatch = piece.match(/^(heroic|mythic|myth|normal|lfr)\b(.*)$/i);
+        if (difficultyMatch) {
+          changed = true;
+          const key = difficultyMatch[1].toLowerCase() === 'myth' ? 'mythic' : difficultyMatch[1].toLowerCase();
+          return `${DIFFICULTY_TW[key]}${difficultyMatch[2]}`;
+        }
+        return piece;
+      });
+      if (changed) {
+        return replaceTrimmed(text, trimmed, pieces.join(' • '));
+      }
     }
 
     const bossTargetMatch = trimmed.match(/^(\d+)\s+boss\s+targets?$/i);
