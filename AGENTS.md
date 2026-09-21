@@ -71,6 +71,18 @@ node tools/generate-game-names.mjs --self-test
    有官方 `zh_TW`，但需要 OAuth client credentials，secret 無法放進公開 userscript，
    也讓產生器多一道申請手續。wago.tools 直接給同樣的 client 資料且免憑證。
 
+## 驗證：沒有 Tampermonkey 怎麼看腳本跑起來的樣子
+
+桌面版內建瀏覽器沒有 userscript manager，也擋外站對 localhost 的請求。用
+`tools/inject-proxy.py` 把目標站整站轉到 127.0.0.1 並注入本機 lib 與 userscript
+（用法與限制見檔頭）。掃描方式：用 TreeWalker 列出頁面上仍是英文、或中英夾雜的
+文字節點，排除 Wowhead anchor（那些歸 widget）。**中英夾雜是最重要的訊號**——
+代表通用規則搶在 widget 前面動了連結文字，或是站方把句子拆成好幾個節點而字典只
+比對到其中一段。
+
+站方改版是常態（2026-09 一次掃描就抓到 keystoneloot／bloodmallet／raidbots 三站的
+標籤改字），使用者回報某處變英文時先跑一次掃描，再決定是字典漏字還是結構變了。
+
 ## 架構
 
 ### `WowheadTwHelper`（`libs/wowhead-tw-helper.js`）

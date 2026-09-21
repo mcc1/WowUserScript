@@ -12,12 +12,24 @@ scripts inlined into <head> sidesteps both. Verification only — never ship.
 The @require lines of the userscript are resolved to the local libs/ copies in
 order, then the userscript itself is appended. Open http://127.0.0.1:<port>/…
 
+The desktop app's browser pane only opens 127.0.0.1 from a preview tab, so
+register the proxy once in .claude/launch.json (gitignored by convention, not
+committed) and attach with preview_start:
+
+    { "version": "0.0.1", "configurations": [
+      { "name": "inject-proxy", "url": "http://127.0.0.1:8765", "port": 8765 } ] }
+
 Known limits of the proxied page (not script bugs):
 - Sites that load Wowhead power.js with Next.js `lazyOnload` wait for the
   window `load` event; if a third-party resource hangs it, inject power.js by
   hand and call `$WowheadPower.refreshLinks(true)`.
 - Cross-origin fetches that rely on GM_xmlhttpRequest (wago.tools has no CORS
   header) fall back to plain fetch and fail here.
+- archon.gg answers the proxy with a "Human Verification" checkbox that must
+  not be clicked through. Test archon on the live page instead: fetch the libs
+  from raw.githubusercontent.com (CORS is open) and eval them, and feed the
+  local script as gzip+base64 through DecompressionStream — the page is a
+  React SPA, so one injection survives tab clicks within the site.
 """
 import argparse
 import gzip
@@ -79,16 +91,33 @@ def make_handler(upstream, inject_files):
             self.wfile.write(data)
 
         def do_GET(self):
+            self.forward()
+
+        def do_POST(self):
+            self.forward()
+
+        def forward(self):
             if self.path.startswith('/__local/'):
                 self.serve_local()
                 return
 
-            request = urllib.request.Request(upstream + self.path, headers={
+            headers = {
                 'User-Agent': self.headers.get('User-Agent', 'Mozilla/5.0'),
                 'Accept': self.headers.get('Accept', '*/*'),
                 'Accept-Language': 'en',
                 'Accept-Encoding': 'gzip, deflate',
-            })
+            }
+            # Cookies ride through both ways so a site's JS bot check (archon's
+            # "One Quick Check") can set its pass cookie on the proxied origin.
+            if self.headers.get('Cookie'):
+                headers['Cookie'] = self.headers['Cookie']
+            data = None
+            if self.command == 'POST':
+                data = self.rfile.read(int(self.headers.get('Content-Length') or 0))
+                for name in ('Content-Type', 'X-Requested-With', 'X-CSRFToken'):
+                    if self.headers.get(name):
+                        headers[name] = self.headers[name]
+            request = urllib.request.Request(upstream + self.path, data=data, headers=headers, method=self.command)
             try:
                 response = urllib.request.urlopen(request, timeout=30)
                 status, headers, body = response.status, response.headers, response.read()
@@ -111,6 +140,9 @@ def make_handler(upstream, inject_files):
                     continue
                 if key.lower() == 'location' and value.startswith(upstream):
                     value = value[len(upstream):]
+                if key.lower() == 'set-cookie':
+                    # 127.0.0.1 over plain http: drop Domain / Secure or the browser rejects it.
+                    value = re.sub(r';\s*(Domain=[^;]*|Secure)', '', value, flags=re.I)
                 self.send_header(key, value)
             self.send_header('Content-Length', str(len(body)))
             self.end_headers()
