@@ -15,6 +15,7 @@
 | `libs/wowhead-tw-helper.js` | 共用函式庫（UMD），所有 `.user.js` 透過 `@require` 載入 |
 | `libs/game-names-tw.js` | **generated** — 副本／團本／首領／種族／職業／專精的官方繁中譯名 |
 | `tools/generate-game-names.mjs` | 產生上面那支；資料來自 wago.tools 的 client DB2，**不要手改產出檔** |
+| `tools/inject-proxy.py` | 驗證用反向代理：把目標站轉到 127.0.0.1 並注入本機 lib 與 userscript（內建瀏覽器沒有 Tampermonkey 時用） |
 | `raidbots-zh-hant.user.js` | raidbots.com 全站翻譯 + Wowhead 連結修補（最大宗） |
 | `archon-zh-hant.user.js` | archon.gg 翻譯 |
 | `bloodmallet-zh-hant-wowhead.user.js` | bloodmallet.com 翻譯 + zh-hant 語言選項注入 |

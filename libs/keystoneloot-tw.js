@@ -1,6 +1,6 @@
 /**
  * KeystoneLoot Traditional Chinese Dictionary
- * @version 1.1.0
+ * @version 1.2.0
  * @description Site-owned UI strings for the KeystoneLoot Traditional Chinese UserScript.
  * @license MIT
  */
@@ -41,11 +41,25 @@
 
     'Stat priority': '屬性優先級',
     'Intellect': '智力',
+    'Strength': '力量',
+    'Agility': '敏捷',
     'Haste': '加速',
     'Critical strike': '致命一擊',
     'Mastery': '精通',
     'Versatility': '臨機應變',
     'Hero talent (M+)': '英雄天賦（傳奇鑰石）',
+    'Hero talent': '英雄天賦',
+    'Weekly key': '每週鑰石',
+    'High keys': '高層鑰石',
+    'Source': '來源',
+    'Guide': '攻略',
+    'Player': '玩家',
+    'Where the items in this list drop': '這份清單的物品掉落來源',
+    'Back to top': '回到頂端',
+    'Main': '主選單',
+    'Language': '語言',
+    'Menu': '選單',
+    'love': '愛心',
     'Into the catalyst': '進入催化器',
     'Raw item': '原始物品',
     'T-set item': '套裝物品',
@@ -54,9 +68,15 @@
     'Crafted': '製作',
     'by': '由',
     'Catalyst': '催化器',
+    // 專業名稱：對照 wago.tools SkillLine DB2 zhTW（ID 164/165/171/197/202/333/755/773）。
     'Tailoring': '裁縫',
     'Inscription': '銘文學',
     'Blacksmithing': '鍛造',
+    'Jewelcrafting': '珠寶設計',
+    'Leatherworking': '製皮',
+    'Engineering': '工程學',
+    'Alchemy': '鍊金術',
+    'Enchanting': '附魔',
 
     'Head': '頭部',
     'Neck': '頸部',
@@ -85,6 +105,8 @@
     'Midnight': '至暗之夜',
     'Season 2': '第 2 季',
     'This list is compiled from publicly available guides for this specialisation and is kept current; the timestamp sits above the list. It shows what counts as the best item per slot for Season 2, and is no substitute for simming your own character.': '這份清單整理自公開的本專精攻略，並會持續更新；時間戳記位於清單上方。清單列出第 2 季各部位的最佳物品，但不能取代對你自己角色進行模擬。',
+    // 站方 2.3.x 把上句拆成兩個以 <br> 分隔的文字節點；第二句含季數，由腳本的 regex 處理。
+    'This list is compiled from publicly available guides for this specialisation and is kept current.': '這份清單整理自公開的本專精攻略，並會持續更新。',
     "Convert these pieces to get the set's 4-piece bonus. New in Season 2: the tier piece takes on the secondary stats of what you put in, and the item level always came along anyway. So all that matters is which slots you pick. The tooltip on the right shows the converted piece, with your stats already on it.": '轉換這些部位即可取得套裝的 4 件套裝效果。第 2 季的新變化是：套裝部位會採用你放入物品的副屬性，而且物品等級本來就會一併保留。因此，你只需要決定要選哪些部位。右側的提示資訊會顯示轉換後的物品，並已套用你的屬性。',
     'Midnight · Season 2': '至暗之夜 · 第 2 季',
     'Midnight · Season 2 · 12.1.0': '至暗之夜 · 第 2 季 · 12.1.0',
@@ -119,6 +141,8 @@
   // 長句中的固定介面術語；物品、法術與遊戲內容名稱仍由連結 widget 或 generated lookup 處理。
   const INLINE_TW = Object.freeze({
     'Intellect': '智力',
+    'Strength': '力量',
+    'Agility': '敏捷',
     'Haste': '加速',
     'Critical strike': '致命一擊',
     'Mastery': '精通',

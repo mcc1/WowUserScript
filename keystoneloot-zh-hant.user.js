@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         KeystoneLoot Traditional Chinese
 // @namespace    https://keystoneloot.io/
-// @version      0.4.1
+// @version      0.5.0
 // @description  Translate KeystoneLoot WoW class pages to Traditional Chinese and patch Wowhead links.
 // @author       mcc
 // @match        https://keystoneloot.io/en/*
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.8.1
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=2
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/keystoneloot-tw.js?v=1.1.0
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/keystoneloot-tw.js?v=1.2.0
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/keystoneloot-zh-hant.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/keystoneloot-zh-hant.user.js
 // @run-at       document-start
@@ -268,6 +268,53 @@
     return `最佳配裝清單：${specTw}，適用於${match[2] === 'Midnight' ? '至暗之夜' : match[2]}第 ${match[3]} 季，共涵蓋 ${match[4]} 個部位，物品等級 ${match[5]}。${details}`;
   }
 
+  function translateGuideStatSentence(value) {
+    const trimmed = String(value || '').trim();
+
+    const recommends = trimmed.match(/^The guide recommends (.+?) for (.+?)\.$/i);
+    if (recommends) {
+      const specTw = translateGameSequence(recommends[2]);
+      if (!specTw) return null;
+      const priorityTw = translateInlineTerms(recommends[1]) || recommends[1];
+      return `攻略建議 ${specTw} 的屬性優先順序為 ${priorityTw}。`;
+    }
+
+    const switchSource = trimmed.match(
+      /^To see what the best (.+?) players actually wear, switch the source above to Warcraft Logs\.$/i
+    );
+    if (switchSource) {
+      const specTw = translateGameSequence(switchSource[1]);
+      if (!specTw) return null;
+      return `想知道頂尖 ${specTw} 玩家實際穿什麼，請把上方的來源切換為 Warcraft Logs。`;
+    }
+
+    const perSlot = trimmed.match(
+      /^It shows what counts as the best item per slot for Season (\d+), and is no substitute for simming your own character\.$/i
+    );
+    if (perSlot) {
+      return `清單列出第 ${perSlot[1]} 季各部位的最佳物品，但不能取代對你自己角色進行模擬。`;
+    }
+
+    return null;
+  }
+
+  // Warcraft Logs 來源模式：句子裡帶著「#1 Noxiv (US)」這類玩家標籤，無法用 exact 字典。
+  function translateLogsPlayerSentence(value) {
+    const trimmed = String(value || '').trim();
+
+    const heading = trimmed.match(/^The gear (.+?) wears$/i);
+    if (heading) return `${heading[1]} 所穿的裝備`;
+
+    const paragraph = trimmed.match(
+      /^This list is not compiled from guides: it is the gear (.+?) actually wore in one of their best runs this season, read from the public logs\. What works for them is not necessarily best for your character, and is no substitute for simming your own\.$/i
+    );
+    if (paragraph) {
+      return `這份清單並非整理自攻略：它是 ${paragraph[1]} 在本賽季最佳場次之一實際穿著的裝備，來自公開的戰鬥紀錄。適合他們的不一定最適合你的角色，也不能取代對你自己角色進行模擬。`;
+    }
+
+    return null;
+  }
+
   function translateStatParagraph(value) {
     const match = String(value || '').trim().match(
       /^Based on the last two weeks of data, the stat priority for (.+?) comes out as (.+?)\. These numbers describe the gear players are actually wearing, so they can lean toward whatever is easiest to get hold of right now\.$/i
@@ -329,13 +376,24 @@
     // generated lookup 把其中的 Cookie 當成同名遊戲資料。
     if (/\bcookies?\b/i.test(trimmed)) return null;
 
-    const statParagraph = translateStatParagraph(trimmed);
+    const statParagraph = translateStatParagraph(trimmed)
+      || translateGuideStatSentence(trimmed)
+      || translateLogsPlayerSentence(trimmed);
     if (statParagraph) {
       return replaceTrimmed(text, trimmed, statParagraph);
     }
 
     const knownNames = translateKnownWowheadNames(trimmed);
     const workingText = knownNames || trimmed;
+
+    // 寶石／附魔旁的複製鈕：title 與 aria-label 是「Copy <物品名>」。物品名只能
+    // 等 Wowhead 配對翻好再換動詞；配對還沒到就整段留白，不能放給下面的通用
+    // 規則碰 —— 它們會把「Enchant Weapon - Arcane Mastery」裡的 Mastery 先換成
+    // 「精通」，之後配對表裡的英文原名就再也對不上了。
+    const copyMatch = workingText.match(/^Copy\s+(.+)$/);
+    if (copyMatch) {
+      return knownNames ? replaceTrimmed(text, trimmed, `複製 ${copyMatch[1]}`) : null;
+    }
 
     const pageHeading = translatePageHeading(workingText);
     if (pageHeading && pageHeading !== trimmed) {
@@ -377,13 +435,20 @@
     return null;
   }
 
+  // OPTION 不跳過：來源切換是原生 <select>，「Guide」就顯示在選項文字上。
   const SKIP_TAGS = new Set([
-    'SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'INPUT', 'OPTION',
+    'SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'INPUT',
     'CODE', 'PRE', 'KBD', 'SAMP',
   ]);
 
+  function isWowheadLink(element) {
+    return element instanceof HTMLAnchorElement && /wowhead\.com/i.test(element.getAttribute('href') || '');
+  }
+
   function shouldSkipElement(element) {
-    return SKIP_TAGS.has(element.tagName) || element.isContentEditable;
+    // Wowhead 連結內的文字歸 widget 改名。通用規則搶在 widget 前面動它，只會產出
+    // 「Voracious Heart of 烏拉特克」這種半成品，還會被當成繁中名稱記進配對表。
+    return SKIP_TAGS.has(element.tagName) || element.isContentEditable || isWowheadLink(element);
   }
 
   function walkTextNodes(root) {
@@ -472,9 +537,11 @@
 
   function translateElementAttributes(element) {
     let touched = false;
+    // 寶石連結的 title 就是物品名，同樣只認 Wowhead 配對，不走通用規則。
+    const translateAttribute = isWowheadLink(element) ? translateKnownWowheadNames : translateText;
     for (const name of ATTRIBUTE_NAMES) {
       const value = element.getAttribute(name);
-      const translated = value ? translateText(value) : null;
+      const translated = value ? translateAttribute(value) : null;
       if (translated && translated !== value) {
         element.setAttribute(name, translated);
         touched = true;
@@ -540,7 +607,9 @@
     let changed = false;
     for (const link of links) {
       const key = getWowheadNameKey(link.getAttribute('href'));
-      const text = (link.textContent || '').trim();
+      // 寶石連結在名稱前可能多一個「2×」數量 span；配對表只記純名稱，
+      // 否則 title="Flawless Quick Amethyst" 這類沒有數量前綴的字串會對不上。
+      const text = (link.textContent || '').trim().replace(/^\d+\s*[×x]\s*/i, '');
       if (!key || !text || !/[A-Za-z\u4e00-\u9fa5]/.test(text)) continue;
 
       const entry = wowheadNameMap.get(key) || {};
@@ -844,6 +913,9 @@
     ? new window.WowheadTwHelper({
         enableRenameLinks: true,
         enableSafeLinkify: true,
+        // 寶石連結是 <a><img><span>名稱</span></a>：圖示與名稱同在一個 anchor，
+        // 不能掛 data-wh-rename-link（widget 會連圖示一起換掉），交給探針改名。
+        enableIconLinkRename: true,
         onScan: (root) => {
           // Widget 會以新 span 取代 anchor 內的文字；此時 MutationObserver 的
           // root 可能只是該 span，必須從整頁 anchors 收集英文／繁中配對。
@@ -855,6 +927,12 @@
             // 否則 WeakMap 會把含有舊英文物品名的長句誤判成已處理。
             translatedNodeText = new WeakMap();
             walkTextNodes(document.body);
+            // 探針改名回寫的是 anchor 內的 span，root 不會涵蓋 anchor 的 title 與
+            // 旁邊複製鈕的 aria-label；配對補齊後整頁屬性也要重翻。
+            translateAttributesInTree(document.body);
+            // power.js 是 lazyOnload，可能晚於探針的 5 秒逾時才到；widget 一開始
+            // 改名（配對表有新資料）就是它已就緒的訊號，把逾時清掉的寶石探針補回來。
+            if (helper) helper.renameIconLinksByProbe(document.body);
           }
           scheduleWowheadNameRescan();
           translateSourceConnectors(root);
