@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Archon.gg Traditional Chinese
 // @namespace    https://www.archon.gg/
-// @version      0.11.2
+// @version      0.12.0
 // @description  Translate archon.gg WoW build pages to Traditional Chinese.
 // @author       mcc
 // @match        https://www.archon.gg/wow/*
@@ -184,6 +184,74 @@
     'Chest': '胸部',
     'Rings': '手指',
     'Main-Hand': '主手',
+    'Neck': '頸部',
+    'Back': '背部',
+    'Wrist': '手腕',
+    'Gloves': '手套',
+    'Belt': '腰帶',
+    'Trinket': '飾品',
+    'Off-Hand': '副手',
+
+    // 裝備頁區塊
+    'Gear by Slot': '各部位裝備',
+    'Crafted Gear': '製作裝備',
+    'Crafted Gear Stats': '製作裝備屬性',
+    'Embellishments': '裝飾',
+    'Missive': '書狀',
+    'Trinket Combinations': '飾品組合',
+    'Individual Trinkets': '個別飾品',
+    'Trinket combo': '飾品組合',
+    'Filter': '篩選',
+    'Only show combos using this trinket:': '只顯示包含此飾品的組合：',
+    'Pick a trinket': '選擇飾品',
+    'Due to stat distribution differences across set items, some may be more popular than others.':
+      '由於套裝各部位的屬性分配不同，有些部位會比其他部位更受歡迎。',
+
+    // 說明段落。站方把職業／專精、物品名等包成 <span> 插在句中，一句話被切成
+    // 好幾個文字節點，這裡收的是切開後的固定碎片；帶數字的碎片走 PROSE_RE。
+    // 碎片前後留給 span 的空白由站方決定，譯文兩端不補標點。
+    'The most popular': '最熱門的',
+    'These are the most popular': '以下是最熱門的',
+    'This is the most recommended': '這是最推薦的',
+    'hero talent tree is': '英雄天賦樹是',
+    'crafted item is': '製作裝備是',
+    'missives. The most popular missive is': '書狀。最熱門的書狀是',
+    'embellishment combos. The most popular combo is': '裝飾組合。最熱門的組合是',
+    'trinket combos. The most popular combo is': '飾品組合。最熱門的組合是',
+    'trinkets. The two most popular trinkets individually are': '飾品。單獨來看最熱門的兩個飾品是',
+    'epic gems. The most popular epic gem is': '史詩寶石。最熱門的史詩寶石是',
+    'gems. The most popular gem is': '寶石。最熱門的寶石是',
+    'enchants we have found.': '附魔。',
+    'consumables we have found.': '消耗品。',
+    'consumables.': '消耗品。',
+    'Based on data in the last 2 weeks, the stat priority for': '根據過去兩週的資料，',
+    'The above Class Tree is the most popular in combination with the Spec & Hero Tree. Here\'s the list of other popular Class Trees used with this Spec & Hero Tree.':
+      '上方的職業天賦樹是與此專精 & 英雄天賦樹搭配最熱門的組合。以下列出其他常與此專精 & 英雄天賦樹搭配的職業天賦樹。',
+    'You can find alternative': '你可以在這裡找到其他',
+    'talent builds here. They will be a little less popular or performant than the recommended one, but may help you adapt to the needs of your group.':
+      '天賦配置。它們的使用率或表現會比推薦配置稍低，但可能有助於你因應隊伍的需求。',
+    'We\'ve built a heatmap of the': '我們製作了',
+    'Here you can find the most popular Omnium Folio runes for each row.': '這裡列出每一列最熱門的萬象儀對開本符文。',
+    'Here you can find the most popular enchants for each item slot.': '這裡列出各裝備部位最熱門的附魔。',
+    'Here you can find the most used items for each slot of your inventory. These include powerful alternative options for your build, even if you can\'t get your hands on the Best in Slot.':
+      '這裡列出各部位最常用的物品，其中包括即使拿不到最佳裝備時也很強的替代選項。',
+    'While optimizing your gear and build is important, it\'s also important to use your':
+      '最佳化裝備與配置固然重要，但有效地使用你的',
+    'abilities effectively. This section lets you view how top players perform so that you can potentially spot opportunities for improvement in your own logs. To get started, select an encounter:':
+      '技能同樣重要。本區塊讓你查看頂尖玩家的表現，幫助你從自己的紀錄中找出可改進之處。請先選擇一場戰鬥：',
+    'Learn About': '透過 Wowhead 了解',
+    'Gear With Wowhead': '裝備',
+    'To learn more about your gearing choices, check out': '想更了解配裝選擇，請參考',
+    '. While Archon can show you the current meta (what gear choices players are making and how they are performing with those choices), Wowhead can teach you more about why certain choices are better than others.':
+      '。Archon 能讓你看到目前的主流（玩家選了哪些裝備、表現如何），Wowhead 則能告訴你為什麼某些選擇比其他的更好。',
+    'Mythic+ Score is a good metric to use because players need a combination of damage, utility, and survivability to push high keys.':
+      '傳奇鑰石分數是很好的指標，因為玩家需要兼具傷害、輔助與生存能力才能推上高層鑰石。',
+    'Popularity is a useful metric because it includes signal from when groups bring players due to certain buffs and utility they provide and not just their raw throughput. However, popularity also includes noise from community bias or whether a spec is particularly fun or easy-to-play.':
+      '使用率是很有用的指標，因為它反映了隊伍因某些增益與輔助能力（而非單純輸出）而帶上特定玩家的訊號。不過，使用率也包含社群偏好、或某個專精特別好玩／容易上手所造成的雜訊。',
+    'Throughput': '輸出',
+    'Survivability': '生存能力',
+    'Our Mythic+ tier list uses the in-game Mythic+ Score as its metric. We pull data from the official Blizzard leaderboard so that all runs are included, even those that weren\'t logged. The score shown in the boxes is the 95th percentile value for that spec. Select a spec to dig into detailed data about its build options.':
+      '我們的傳奇鑰石強度排行以遊戲內的傳奇鑰石分數為指標。資料取自暴雪官方排行榜，因此所有場次都會納入，包括沒有上傳紀錄的。方塊中顯示的分數是該專精的第 95 百分位數。選擇一個專精即可深入查看其配置選項的詳細資料。',
 
     // 消耗品頁。Flask 的官方分類是「合劑」（Wowhead item=191359 歸在該分類下）
     'Consumables by Type': '各類消耗品',
@@ -198,6 +266,8 @@
     'Select Encounter': '選擇首領',
     'Difficulty': '難度',
     'Mythic': '傳奇',
+    'Heroic': '英雄',
+    'Normal': '普通',
     'Boss': '首領',
     'All Bosses': '所有首領',
     'Show DPS & HPS': '顯示 DPS & HPS',
@@ -251,6 +321,11 @@
     'Enchants & Gems': '附魔 & 寶石',
     'Consumables': '消耗品',
     'Tier Set': '套裝',
+    'Gear & Tier': '裝備 & 套裝',
+    'Gear Tables': '裝備表',
+    'Trinket Combos': '飾品組合',
+    'Missives': '書狀',
+    'Tier Set Slots': '套裝部位',
     'Rotation': '迴圈',
     'Overview': '總覽',
     'Talents': '天賦',
@@ -336,6 +411,8 @@
   const KEY_RANGE_RE = /^\+(\d+)\s+to\s+\+(\d+)$/;
   const RELATIVE_TIME_RE = /^(\d+)\s+(second|minute|hour|day|week|month|year)s?\s+ago$/i;
   const RANKING_HEADING_RE = /^(DPS|Tank|Healer)\s+(Tier List|Rankings)\s+for\s+(.+?)\s+(Mythic\+|Raid)$/;
+  // 團隊副本版：「DPS Tier List for Heroic The Venomous Abyss」
+  const RAID_RANKING_HEADING_RE = /^(DPS|Tank|Healer)\s+(Tier List|Rankings)\s+for\s+(Heroic|Normal|Mythic|LFR)\s+(.+)$/;
   const PAGE_TITLE_RE = /^(\S+)\s+(DPS|Tank|Healer)\s+(Tier List|Rankings)\s+and\s+(Mythic\+|Raid)\s+(Tier List|Rankings)$/;
 
   /**
@@ -368,9 +445,15 @@
   /** 「DPS Tier List for +7 to +19 Mythic+」→「+7 到 +19 傳奇鑰石 DPS 強度排行」 */
   function translateRankingHeading(text) {
     const match = text.match(RANKING_HEADING_RE);
-    if (!match) return null;
-    const range = translateKeyRange(match[3]) || match[3];
-    return joinTw(range, CONTENT_TW[match[4]], ROLE_TW[match[1]], RANKING_SECTION_TW[match[2]]);
+    if (match) {
+      const range = translateKeyRange(match[3]) || match[3];
+      return joinTw(range, CONTENT_TW[match[4]], ROLE_TW[match[1]], RANKING_SECTION_TW[match[2]]);
+    }
+    const raidMatch = text.match(RAID_RANKING_HEADING_RE);
+    if (!raidMatch) return null;
+    const raid = lookupGameName(raidMatch[4]);
+    if (!raid) return null;
+    return joinTw(EXACT_TW[raidMatch[3]] + raid, ROLE_TW[raidMatch[1]], RANKING_SECTION_TW[raidMatch[2]]);
   }
 
   /** 「Midnight DPS Rankings and Mythic+ Tier List」→「至暗之夜 DPS 排行榜與傳奇鑰石強度排行」 */
@@ -381,6 +464,105 @@
     if (!expansion) return null;
     return joinTw(expansion, ROLE_TW[match[2]], RANKING_SECTION_TW[match[3]])
       + '與' + joinTw(CONTENT_TW[match[4]], RANKING_SECTION_TW[match[5]]);
+  }
+
+  // ── 說明段落裡帶數字／名稱的碎片 ────────────────────────────────────────
+  // 每個 handler 只吃 span 切開後的單一文字節點；比對整段才會誤傷別的句子。
+  const SEASON_RE = /^Season (\d+)$/;
+
+  function translateSeasonOrPatch(text) {
+    const match = text.match(SEASON_RE);
+    return match ? `第 ${match[1]} 季` : ` ${text} `;
+  }
+
+  function translateContentScope(text) {
+    if (CONTENT_TW[text]) return CONTENT_TW[text];
+    return lookupGameName(text) || text;
+  }
+
+  function translateStatOrder(text) {
+    const parts = text.split(/\s*>\s*/);
+    if (parts.length < 2) return text;
+    return parts.map(part => STAT_MAP[part.trim()] || part.trim()).join(' > ');
+  }
+
+  const PROSE_RULES = [
+    // 「Build in WoW - Midnight. Data-driven builds updated daily for Mythic+ in Midnight Season 2.」
+    {
+      re: /^(Build|Talent Tree|Rotation|Gear & Tier|Enchants & Gems|Consumables|Trinkets) in WoW - (.+?)\. Data-driven builds updated daily for (.+?) in (\S+) (Season \d+|[\d.]+)\.$/,
+      tw: m => {
+        const suffix = TITLE_SUFFIX_TW[m[1]] || EXACT_TW[m[1]];
+        const expansion = EXPANSION_TW[m[2]];
+        if (!suffix || !expansion) return null;
+        return `${suffix}（WoW - ${expansion}）。資料來自實際紀錄，每日更新，涵蓋${EXPANSION_TW[m[4]] || m[4]}${translateSeasonOrPatch(m[5])}的${translateContentScope(m[3])}。`;
+      },
+    },
+    { re: /^Based on all keys (\d+) and above in the last (\d+) days\.$/, tw: m => `統計自過去 ${m[2]} 天內 +${m[1]} 以上的鑰石。` },
+    { re: /^Based on the top (\d+)% of data in the last (\d+) days\.$/, tw: m => `統計自過去 ${m[2]} 天內前 ${m[1]}% 的資料。` },
+    { re: /^Based on all data from the last (\d+) days\.$/, tw: m => `統計自過去 ${m[1]} 天的所有資料。` },
+    {
+      re: /^Our tier lists are updated daily and are based on all data across the last (\d+) weeks\. We rank specs by multiple different metrics and let you choose which metric to see rankings for\. Swap between metrics to see the strengths and weaknesses of different specs\. The (DPS|HPS) shown in the boxes is the 95th percentile value for that spec\. Select a spec to dig into detailed data about its build options\.$/,
+      tw: m => `我們的強度排行每日更新，統計自過去 ${m[1]} 週的所有資料。我們以多種不同指標為專精排名，並讓你自行選擇要查看哪種指標的排行。切換指標即可看出各專精的強項與弱點。方塊中顯示的 ${m[2]} 是該專精的第 95 百分位數。選擇一個專精即可深入查看其配置選項的詳細資料。`,
+    },
+    { re: /^Based on data in the last (\d+) weeks?, the stat priority for$/, tw: m => `根據過去 ${m[1]} 週的資料，` },
+    {
+      re: /^looks to be (.+?)\. However, there may be bias based on what gear is available to players\.$/,
+      tw: m => `的屬性優先順序看來是 ${translateStatOrder(m[1])}。不過，這可能因玩家可取得的裝備而有所偏差。`,
+    },
+    // 「talent build for +7 to +21 Mythic+ on All Dungeons. Our recommendation is based on …」
+    {
+      re: /^talent build for (.+?) (Mythic\+|Raid) on (.+?)\. Our recommendation is based on the combined popularity of the Spec & Hero Trees? \(as these usually contain the most significant choices\) and then by (the highest key level reached with those Spec & Hero Trees|the popularity of Class Trees that use those Spec & Hero Trees)\.$/,
+      tw: m => {
+        const range = translateKeyRange(m[1]) || EXACT_TW[m[1]] || m[1];
+        const scope = EXACT_TW[m[3]] || lookupGameName(m[3]) || m[3];
+        const tail = m[4].startsWith('the highest')
+          ? '使用這些天賦樹所達到的最高鑰石層數'
+          : '搭配這些天賦樹的職業天賦樹使用率';
+        return `天賦配置，適用於${scope}的 ${range} ${CONTENT_TW[m[2]]}。我們的推薦依據是專精 & 英雄天賦樹的綜合使用率（它們通常包含最關鍵的選擇），再依${tail}排序。`;
+      },
+    },
+    {
+      re: /^gear based on all data across the last (\d+) weeks\. This represents a strong set of gear for this point in (Season \d+|[\d.]+) that is close to Best in Slot but with some alternatives that are easier to obtain\. Tier pieces up to the maximum set bonus and legendary items have been prioritized once seen at least once\.$/,
+      tw: m => `裝備，統計自過去 ${m[1]} 週的所有資料。這代表在${translateSeasonOrPatch(m[2])}目前這個階段，一套接近最佳裝備、但部分替代品較容易取得的強力配裝。套裝部位（至最高套裝效果為止）與傳說物品只要出現過一次就會優先列入。`,
+    },
+    { re: /^tier set in (Season \d+|[\d.]+)\. These are its effects:$/, tw: m => `在${translateSeasonOrPatch(m[1])}的套裝。效果如下：` },
+    { re: /^(\d+) Set Bonus$/, tw: m => `${m[1]} 件套裝效果` },
+    {
+      re: /^talents from the top (\d+) rankings\. This should help you pick the most impactful talents and give you ideas on how to adapt your talents to your playstyle\.$/,
+      tw: m => `天賦的熱點圖，資料來自前 ${m[1]} 名的紀錄。這能幫助你挑出影響最大的天賦，並依你的玩法調整天賦。`,
+    },
+    {
+      re: /^Explore the WoW meta with our always up-to-date tier list for (.+?)\. Warcraft Logs has the best (\S+) (DPS|Tank|Healer) rankings for World of Warcraft in (Season \d+|[\d.]+)\.$/,
+      tw: m => `透過我們隨時更新的${translateContentScope(m[1])}強度排行探索 WoW 的主流。Warcraft Logs 擁有魔獸世界${EXPANSION_TW[m[2]] || m[2]}${translateSeasonOrPatch(m[4])}最完整的 ${ROLE_TW[m[3]]} 排行榜。`,
+    },
+  ];
+
+  function translateProse(text) {
+    for (const rule of PROSE_RULES) {
+      const match = text.match(rule.re);
+      if (match) return rule.tw(match) || null;
+    }
+    return null;
+  }
+
+  // 「… is 日怒 with 99.6% usage.」這種句子裡的連接詞是獨立文字節點；只有在
+  // 說明句裡才翻，否則頁面上任何一個孤立的 and / with 都會被換掉。
+  const PROSE_CONNECTIVE_TW = Object.freeze({
+    'with': '，使用率為',
+    'usage.': '。',
+    'usage and': '，以及',
+    'and': '和',
+    'is the': '是',
+  });
+  const PROSE_CONTEXT_RE = /most popular|usage|tier set in/i;
+
+  function translateProseConnective(node) {
+    const trimmed = node.textContent.trim();
+    const tw = PROSE_CONNECTIVE_TW[trimmed];
+    if (!tw) return null;
+    const block = node.parentElement && node.parentElement.closest('p,div,li');
+    if (!block || !PROSE_CONTEXT_RE.test(block.textContent)) return null;
+    return node.textContent.replace(trimmed, tw);
   }
 
   const NUMBERED_RE = /^(.+?)\s+#(\d+)$/;
@@ -482,7 +664,8 @@
       || translateParseCount(trimmed)
       || translateRowLabel(trimmed)
       || translateKeyRange(trimmed)
-      || translateRelativeTime(trimmed);
+      || translateRelativeTime(trimmed)
+      || translateProse(trimmed);
     if (templated) {
       return text.replace(trimmed, templated);
     }
@@ -533,7 +716,7 @@
       const orig = node.textContent;
       if (translatedNodeText.get(node) === orig) continue;
 
-      const translated = translateString(orig);
+      const translated = translateString(orig) ?? translateProseConnective(node);
       if (translated !== null && translated !== orig) {
         updates.push({ node, translated });
       } else {
