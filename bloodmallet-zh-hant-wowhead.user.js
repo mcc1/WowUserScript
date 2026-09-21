@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bloodmallet Traditional Chinese Wowhead
 // @namespace    https://bloodmallet.com/
-// @version      0.9.0
+// @version      0.10.0
 // @description  Add zh-hant mode, switch item links/names to the zh-hant Wowhead locale, and translate class/spec labels.
 // @author       mcc
 // @match        https://bloodmallet.com/*
@@ -105,6 +105,88 @@
     'Character profile': '角色配置',
   });
 
+  // 導覽列、篩選標籤、圖表說明與頁尾。站方把說明句用 <a>／<code> 切成碎片，
+  // 這裡收的是切開後的文字節點原文；圖表說明目前只收飾品圖（最常用），
+  // 其他圖表類型的說明段落仍是英文。
+  const PAGE_TW = Object.freeze({
+    'Power Infusion': '能量灌注',
+    'Trinkets': '飾品',
+    'Login': '登入',
+    '登录': '登入',
+    'Register': '註冊',
+    'Settings': '設定',
+    'Itemlevels:': '物品等級：',
+    'Sources:': '來源：',
+    'Show:': '顯示：',
+    'SimulationCraft hash:': 'SimulationCraft 版本雜湊：',
+    'Chart Explanation': '圖表說明',
+    "What's going on here?": '這裡在做什麼？',
+    'This chart shows how much power a single trinket adds to a profile.': '這張圖表顯示單一飾品能為配置增加多少強度。',
+    'It uses the "tier appropriate"': '它使用「符合當前階段」的',
+    'SimulationCraft profile': 'SimulationCraft 配置',
+    '. If the fight style is neither': '。如果戰鬥風格既不是',
+    'nor': '也不是',
+    'a "tier appropriate"': '，就會改用「符合當前階段」的',
+    'fallback profile': '後備配置',
+    'is used to improve the data quality. In a custom chart if the creator provided a profile, it replaces the formerly mentioned profiles.':
+      '以提升資料品質。在自訂圖表中，若建立者提供了配置，則會取代前述的配置。',
+    'Both trinkets are removed from the profile. Instead one trinket with the appropriate primary stat and a static Versatility amount is equipped. This profile is the base profile. For each trinket and trinket itemlevel you see above a new profile is created.':
+      '配置中的兩個飾品都會被移除，改為裝備一個具備對應主屬性與固定臨機應變數值的飾品。這個配置就是基礎配置。上方每一個飾品與每個物品等級都會各自產生一個新的配置。',
+    // 首頁簡介
+    'This site provides an overview about several simulateable aspects for almost all specs in World of Warcraft using':
+      '本站以',
+    '. These overviews are an entry point.': ' 為魔獸世界幾乎所有專精提供多項可模擬面向的總覽。這些總覽只是入門的起點。',
+    // 句尾的 <a>Patreon</a> 是頁尾也在用的連結文字，不能動；把句子收在連結前面
+    'You can generate your own charts by becoming a': '你也可以成為贊助者來產生自己的圖表：',
+    'For indepth information about your spec use your theorycrafters guides.': '關於你的專精的深入資訊，請參考理論研究者的攻略。',
+    'Bugreport': '回報錯誤',
+    'Handbook': '手冊',
+    'FAQ': '常見問題',
+    'About': '關於',
+    'Terms and Conditions': '條款與細則',
+    'Greetings,': '您好，',
+    'bloodmallet.com would like to use': 'bloodmallet.com 想使用',
+    'anonymized': '匿名的',
+    ', to know how many people are using the website. You can either accept or reject this. Your choice will be saved on your device in a cookie.':
+      '，以了解有多少人在使用本網站。你可以接受或拒絕。你的選擇會以 cookie 儲存在你的裝置上。',
+  });
+
+  const PAGE_SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'CODE', 'PRE', 'TEXTAREA', 'INPUT', 'OPTION']);
+
+  /** 逐個文字節點比對 PAGE_TW；圖表本體與 Wowhead 連結歸別的機制管，不碰。 */
+  function translatePageText(root) {
+    const scope = root && root.nodeType === Node.ELEMENT_NODE ? root : document.body;
+    if (!scope) return;
+
+    const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        let el = node.parentElement;
+        while (el && el !== scope.parentElement) {
+          if (PAGE_SKIP_TAGS.has(el.tagName)) return NodeFilter.FILTER_REJECT;
+          if (el.id === 'chart' || (el.tagName === 'A' && /wowhead\.com/i.test(el.getAttribute('href') || ''))) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          el = el.parentElement;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+
+    let node;
+    while ((node = walker.nextNode())) {
+      const raw = node.textContent;
+      const trimmed = raw.trim();
+      if (!trimmed) continue;
+      // 站方模板有換行縮排，句子中間會夾著換行加空格；比對時先壓成單一空格
+      const key = trimmed.replace(/\s+/g, ' ');
+      let next = PAGE_TW[key];
+      if (!next && node.parentElement.classList.contains('bm-title')) {
+        next = CHART_TYPE_TW_MAP[key];
+      }
+      if (next && next !== trimmed) node.textContent = raw.replace(trimmed, next);
+    }
+  }
+
   const CHART_AXIS_TW_MAP = Object.freeze({
     '% damage per second': '每秒傷害百分比',
     'damage per second': '每秒傷害',
@@ -129,6 +211,13 @@
     'Wrists': '手腕',
     'Main Hand': '主手',
     'Off Hand': '副手',
+    // 站方 2026-09 改版後的部位佔位字與 meta 標籤（舊字串保留，兩版都認）
+    'Ring': '戒指',
+    'Weapon': '武器',
+    'Off-Hand': '副手',
+    'Fight style': '戰鬥風格',
+    'SimulationCraft Hash': 'SimulationCraft 版本雜湊',
+    'Base profile': '基礎配置',
     'Spec &': '專精 &',
     'Class': '職業',
     'Spec': '專精',
@@ -265,8 +354,9 @@
     // 1. 翻譯所有欄位值（Class, Spec, Race, Fight Style 等）
     const raceEl = document.getElementById('c_race');
     if (raceEl) {
-      const twRace = lookupGameUnit(raceEl.textContent);
-      if (twRace) raceEl.textContent = twRace;
+      // 資料還沒載入時欄位是佔位字「Race」，不是種族名
+      const twRace = lookupGameUnit(raceEl.textContent) || SLOT_LABELS_TW[raceEl.textContent.trim()];
+      if (twRace && raceEl.textContent !== twRace) raceEl.textContent = twRace;
     }
 
     const fightStyleEl = document.getElementById('c_fight_style');
@@ -551,6 +641,7 @@
         translateCharacterProfile();
         translateUiControls(root);
         translateChartAxis(root);
+        translatePageText(root);
         if (isIndexPage) {
           translateIndexClassSpecLinks(root);
         }
