@@ -167,12 +167,17 @@ Wowhead widget 改名的方式是**把整個 `innerHTML` 換成 `<span>名稱</s
 連結（探針）掛上改名標記，widget 改寫探針，讀出譯名後只寫回原連結裡放名稱的那個文字
 節點，最後移除探針。原連結全程不掛 `data-wh-rename-link`。
 
-兩個實作細節：
+三個實作細節：
 
 - 探針**不能用 `display:none`**，widget 會略過不算數的節點；要用 `position:absolute`
   移到畫面外。
 - 逾時的探針一定要移除並清掉 `data-tw-icon-renamed`，否則探針會在 DOM 裡累積，而那些
   連結會被永久標記成已處理。
+- **widget 會先把連結文字改寫成字串 `undefined`**，tooltip 資料回來之後才換成真正的
+  名稱。探針只看「文字變了沒」的話，第一輪就會收下 `undefined` 並寫進畫面 ——
+  2026-10-17 在同一份 Droptimizer 報告上 11 筆品名有 6 筆變成 `undefined`，重新整理
+  又正常，所以這是競態不是資料缺漏（那幾件的 zhTW 名稱 Wowhead 都有）。
+  `INVALID_PROBE_TEXTS` 把 `undefined` / `null` 當成「還沒好」繼續重試。
 
 `whTooltips.renameLinks` 是**全域**旗標，設成 true 會讓 widget 改寫頁面上每一個連結 ——
 包含上面那種，圖示和數據一起沒。`setupGlobalLocale()` 刻意不設它，raidbots 還明確設成
@@ -491,10 +496,10 @@ Wowhead widget 只碰文字節點。
   companion 的 Top Gear 大秘寶庫報告。
 - raidbots 字典缺賭博類來源的 `Gamble` / `Buy` / `Gamble/Buy`, 以及好運符列的
   `Bonus Roll · N in pool`。補之前要先在有這些欄位的報告上看過上下文。
-- `game-names-tw.js` 查不到 `Kith'ix` / `The Unbinding of Kith'ix` (2026-10-17 的
-  Droptimizer 報告上是英文)。新團本的 Journal 資料還沒進生成檔 -- 重跑
-  `node tools/generate-game-names.mjs` 看 wago.tools 是否已經有, 有就順便 bump
-  `game-names-tw.js?v=`。
+- `game-names-tw.js` 已於 2026-10-17 重跑 (`?v=3`), 補上 `Kith'ix` -> 克希斯 與
+  `The Unbinding of Kith'ix` -> 克希斯的解放 (以及新專精 Traveler)。先前那兩筆查不到
+  不是正規化的問題, 就是生成檔還沒跟上新團本 -- 看到英文的副本/首領名, 第一步永遠是
+  重跑產生器, 不是加字典。
 - bloodmallet 已於瀏覽器實地驗證（2026-08-29，v0.8.0）：語言表註冊、bar tooltip
   回填、`/index.html` 首頁翻譯三項都確認生效。
 

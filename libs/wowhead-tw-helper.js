@@ -1,6 +1,6 @@
 /**
  * Wowhead Traditional Chinese Helper Library (WowheadTwHelper)
- * @version 1.10.0
+ * @version 1.10.1
  * @description Shared library for UserScripts to localize Wowhead links, tooltips, and handle SPA dynamic updates safely.
  * @license MIT
  */
@@ -22,6 +22,12 @@
   ]);
   const TW_LOCALE = 'tw';
   const WOWHEAD_ITEM_OR_SPELL_LINK = 'a[href*="wowhead.com"][href*="item="],a[href*="wowhead.com"][href*="spell="],a[href*="wowhead.com"][href*="currency="],a[href*="wowhead.com"][href*="/item/"],a[href*="wowhead.com"][href*="/spell/"],a[href*="wowhead.com"][href*="/currency/"]';
+  // Wowhead widget 在 tooltip 資料還沒回來時，會先把連結文字改寫成字串
+  // "undefined"（偶爾是 "null"）。那不是譯名 —— 探針收下去就直接寫進畫面，
+  // 使用者看到的是一個大大的 undefined，比留著英文還糟。當成「還沒好」重試即可，
+  // 資料到了下一輪就是正確的名稱（2026-10-17 在 raidbots 報告上實際踩到：
+  // 11 筆品名有 6 筆變成 undefined，重新整理後又正常，是競態不是資料缺漏）。
+  const INVALID_PROBE_TEXTS = new Set(['undefined', 'null']);
   const LINKIFY_SKIP_SELECTOR = 'script,style,noscript,textarea,input,option,code,pre,kbd,samp,[contenteditable]';
   const INTERACTIVE_MENU_SELECTOR = '.DropdownMenu,[role="menu"],[role="listbox"]';
   const ITEM_CARD_SELECTOR = '[data-test="actor-compare-row"], [data-testid^="droptimizer-item-"], [data-testid^="item-option-"], .DroptimizerRow, .ItemOption, [class*="droptimizerItem"], [class*="DroptimizerRow"], div.item, [id$="/item"]';
@@ -360,7 +366,7 @@
           const renamed = (job.probe.textContent || '').trim();
 
           const target = job.target;
-          if (renamed && renamed !== job.original) {
+          if (renamed && renamed !== job.original && !INVALID_PROBE_TEXTS.has(renamed.toLowerCase())) {
             if (target && target.isConnected && target.textContent.indexOf(job.original) !== -1) {
               target.textContent = target.textContent.replace(job.original, renamed);
             }

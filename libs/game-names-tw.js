@@ -7,9 +7,9 @@
  *
  * 改版後請重跑：node tools/generate-game-names.mjs
  *
- * 產生時間：2026-08-29T11:50:25.518Z
- * NAMES：2996 筆別名（副本／團本／首領，1373 個實體）
- * UNITS：320 筆別名（種族／職業／專精，209 個實體）
+ * 產生時間：2026-10-17T14:14:44.185Z
+ * NAMES：3000 筆別名（副本／團本／首領，1375 個實體）
+ * UNITS：320 筆別名（種族／職業／專精，210 個實體）
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
@@ -720,6 +720,7 @@
     "kingsrest": "諸王之眠",
     "kingymiron": "依米倫王",
     "kintara": "金塔拉",
+    "kithix": "克希斯",
     "knightcaptainvalyri": "騎士隊長瓦萊麗",
     "kokiablazehoof": "可幾亞‧焰蹄",
     "kologarn": "柯洛剛恩",
@@ -2010,6 +2011,7 @@
     "thekingsrest": "諸王之眠",
     "thekingymiron": "依米倫王",
     "thekintara": "金塔拉",
+    "thekithix": "克希斯",
     "theknightcaptainvalyri": "騎士隊長瓦萊麗",
     "thekokiablazehoof": "可幾亞‧焰蹄",
     "thekologarn": "柯洛剛恩",
@@ -2666,6 +2668,7 @@
     "theulmaththesoulbinder": "『縛魂者』烏爾瑪斯",
     "theultraxion": "奧特拉賽恩",
     "theumbrelskul": "安珀斯庫",
+    "theunbindingofkithix": "克希斯的解放",
     "theunboundabomination": "無縛異怪",
     "theunderbog": "深幽泥沼",
     "theunderrot": "幽腐深窟",
@@ -2873,6 +2876,7 @@
     "ulmaththesoulbinder": "『縛魂者』烏爾瑪斯",
     "ultraxion": "奧特拉賽恩",
     "umbrelskul": "安珀斯庫",
+    "unbindingofkithix": "克希斯的解放",
     "unboundabomination": "無縛異怪",
     "underbog": "深幽泥沼",
     "underrot": "幽腐深窟",
@@ -3349,7 +3353,7 @@
     classes: Object.freeze(["Adventurer", "Death Knight", "Demon Hunter", "Druid", "Evoker", "Hunter", "Mage", "Monk", "Paladin", "Priest", "Rogue", "Shaman", "Traveler", "Warlock", "Warrior"]),
     heroTalents: Object.freeze(["Akil'zon, Loa of Victory", "Aldrachi Reaver", "Annihilator", "Archon", "Chainmail", "Chronowarden", "Colossus", "Conduit of the Celestials", "Damage Dealer", "Dark Ranger", "Deathbringer", "Deathstalker", "Diabolist", "Druid of the Claw", "Elune's Chosen", "Farseer", "Fatebound", "Fel-Scarred", "Flameshaper", "Frostfire", "Halazzi, Loa of the Hunt", "Healer", "Hellcaller", "Herald of the Sun", "Jan'alai, Loa of Fire", "Keeper of the Grove", "Lightsmith", "Master of Harmony", "Mountain Thane", "Nalorakk, Loa of War", "Oracle", "Pack Leader", "Platemail", "Rider of the Apocalypse", "Robes", "San'layn", "Scalecommander", "Sentinel", "Shado-Pan", "Slayer", "Soul Harvester", "Spellslinger", "Stormbringer", "Sunfury", "Tank", "Templar", "Totemic", "Trickster", "Void-Scarred", "Voidweaver", "Wildstalker"]),
     races: Object.freeze(["Algarian Stormrider", "Blood Elf", "Broken", "Cliffside Wylderdrake", "Dark Iron Dwarf", "Delver's Dirigible", "Delver's Gob-Trotter", "Dracthyr", "Draenei", "Dwarf", "Earthen", "Ethereal Airship", "Fel Orc", "Flourishing Whimsydrake", "Forest Troll", "Gilnean", "Gnome", "Goblin", "Grotto Netherwing Drake", "Haranir", "Highland Drake", "Highmountain Tauren", "Human", "Ice Troll", "Kul Tiran", "Lightforged Draenei", "Mag'har Orc", "Mechagnome", "Naga", "Night Elf", "Nightborne", "Northrend Skeleton", "Orc", "Pandaren", "Renewed Proto-Drake", "Skeleton", "Stoneforged Sentinel", "Taunka", "Tauren", "Troll", "Tuskarr", "Undead", "Visage", "Void Elf", "Vrykul", "Vulpera", "Windborne Velocidrake", "Winding Slitherdrake", "Worgen", "Zandalari Troll"]),
-    specs: Object.freeze(["Adventurer", "Affliction", "Arcane", "Arms", "Assassination", "Augmentation", "Balance", "Beast Mastery", "Blood", "Brewmaster", "Cunning", "Demonology", "Destruction", "Devastation", "Devourer", "Discipline", "Elemental", "Enhancement", "Feral", "Ferocity", "Fire", "Frost", "Fury", "Guardian", "Havoc", "Holy", "Initial", "Marksmanship", "Mistweaver", "Outlaw", "Preservation", "Protection", "Restoration", "Retribution", "Shadow", "Subtlety", "Survival", "Tenacity", "Unholy", "Vengeance", "Windwalker"]),
+    specs: Object.freeze(["Adventurer", "Affliction", "Arcane", "Arms", "Assassination", "Augmentation", "Balance", "Beast Mastery", "Blood", "Brewmaster", "Cunning", "Demonology", "Destruction", "Devastation", "Devourer", "Discipline", "Elemental", "Enhancement", "Feral", "Ferocity", "Fire", "Frost", "Fury", "Guardian", "Havoc", "Holy", "Initial", "Marksmanship", "Mistweaver", "Outlaw", "Preservation", "Protection", "Restoration", "Retribution", "Shadow", "Subtlety", "Survival", "Tenacity", "Traveler", "Unholy", "Vengeance", "Windwalker"]),
   });
 
   function normalize(value) {
