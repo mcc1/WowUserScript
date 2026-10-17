@@ -1,6 +1,6 @@
 /**
  * Wowhead Traditional Chinese Helper Library (WowheadTwHelper)
- * @version 1.9.0
+ * @version 1.10.0
  * @description Shared library for UserScripts to localize Wowhead links, tooltips, and handle SPA dynamic updates safely.
  * @license MIT
  */
@@ -426,7 +426,6 @@
         if (candidate.closest('a,button,label,textarea,select,[role="button"]')) continue;
         if (candidate.closest(LINKIFY_SKIP_SELECTOR)) continue;
         if (candidate.closest('h1,h2,h3,h4,h5,h6,thead,th,caption,[role="heading"],[role="columnheader"]')) continue;
-        if (this.isInsideExcludedPanel(candidate)) continue;
         if (candidate.classList.contains('Tooltip_box')) continue;
         if (candidate.dataset.twWowheadRenaming === 'true') continue;
 
@@ -439,6 +438,9 @@
         const itemCard = candidate.closest(ITEM_CARD_SELECTOR);
         const iconLink = this.findNearestWowheadIconLink(candidate);
         if (!iconLink) continue;
+
+        // Summary／好運符面板預設整塊跳過，只有「一列一件裝備」的列放行。
+        if (this.isInsideExcludedPanel(candidate) && !this.isSingleItemRow(candidate, iconLink)) continue;
 
         // Raidbots 的 Copy/Modify 選單同時包含主裝備、紋章與其他成本列。
         // 只有列內自己的圖示才是安全來源；若探針跨出選單抓到外層主裝備，
@@ -749,6 +751,48 @@
         links.push(link);
       }
       return links;
+    }
+
+    /**
+     * 這段文字是不是「一列一件裝備」那種列裡唯一的名稱？
+     *
+     * Summary／好運符面板整塊被 `isInsideExcludedPanel` 跳過，因為那種列的文字是
+     * 地城或首領名，配上列內的掉落物圖示就會變成「看起來完全合理的錯誤資訊」。
+     * 但 Top Gear 的「大秘寶庫 總覽」就長在這種面板裡，而它每一列是真的一件裝備：
+     * 一個物品圖示排在前面，後面接品名與「寶庫物品 · 胸部」這類說明。
+     *
+     * 放行條件全是形狀，不看面板標題也不列舉站台字串 —— 兩者都會隨改版漂移：
+     * - 圖示必須是物品連結（好運符列的圖示另外掛通貨徽章，那一列就有兩個目標）
+     * - 圖示排在名稱前面（summary 列的掉落物圖示帶掛在名稱後面）
+     * - 名稱往上兩層內第一個裝著圖示的祖先裡只有一件物品，而且這段是裡面第一個名稱
+     * 任何一條不成立就維持站方原文。漏翻只是不好看，翻錯是假資訊。
+     * @param {Element} textElement
+     * @param {HTMLAnchorElement} iconLink
+     * @returns {boolean}
+     */
+    isSingleItemRow(textElement, iconLink) {
+      // 合成圖示（從 img src 猜出來的假連結）不在 DOM 裡，無法驗證列的形狀。
+      if (!iconLink.isConnected) return false;
+      if (!/\/item(?:=|\/)/.test(iconLink.getAttribute('href') || '')) return false;
+      if (!(iconLink.compareDocumentPosition(textElement) & Node.DOCUMENT_POSITION_FOLLOWING)) return false;
+
+      // 只往上找兩層。真正的裝備列是「圖示盒 + 名稱盒」並排，圖示就在第 2 層。
+      // 再往上就會抓到整列，而 Droptimizer 總覽列右邊掛著 Gamble／Buy 這種站台
+      // 字典沒收到的欄位標籤 —— 那一列只掉一件裝備時，標籤就會被改成它的名字。
+      let scope = textElement.parentElement;
+      for (let depth = 0; depth < 2 && scope instanceof Element; depth += 1) {
+        if (scope.contains(iconLink)) {
+          const links = [];
+          for (const link of scope.querySelectorAll(WOWHEAD_ITEM_OR_SPELL_LINK)) {
+            if (link.contains(textElement) || textElement.contains(link)) continue;
+            links.push(link);
+          }
+          if (this.countDistinctLinkTargets(links) !== 1) return false;
+          return this.isFirstNameTextIn(scope, textElement);
+        }
+        scope = scope.parentElement;
+      }
+      return false;
     }
 
     /**

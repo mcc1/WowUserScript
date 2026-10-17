@@ -202,6 +202,37 @@ Wowhead widget 改名的方式是**把整個 `innerHTML` 換成 `<span>名稱</s
 不是名稱, 它的圖示變成「沒有主人」, 同一塊裡排在後面的附加文字就接手把自己改成
 附魔名 -- 重整一次好一次壞。
 
+#### Summary 面板: 不是整塊跳過, 而是只放行「一列一件裝備」的列
+
+`excludedPanelKeywords` (summary / 總覽 / bonus roll / 好運符…) 原本讓探針整塊跳過
+標題含這些字的面板。擋掉的東西是對的 -- 好運符列與 Droptimizer 的首領總覽列, 文字
+是首領或地城名, 右邊掛著那一場的一整排掉落物圖示, 配起來就是「看起來完全合理的
+錯誤資訊」。但同一條排除也擋掉了 Top Gear 的「大秘寶庫 總覽」, 那裡每一列是真的
+一件裝備, 於是整個頁面只有這一塊停在英文。
+
+`isSingleItemRow()` 把排除從「看面板標題」改成「看列的形狀」, 三條都成立才放行:
+
+| 條件 | 擋掉什麼 |
+|---|---|
+| 圖示必須是 `item=` 連結, 且真的在 DOM 裡 (不是從 `img.src` 猜出來的合成連結) | 從圖示網址猜來源時無法驗證列形狀 |
+| 圖示排在名稱**前面** | summary 列的掉落物圖示帶掛在名稱後面 |
+| 名稱往上**兩層內**第一個裝著圖示的祖先裡只有一件物品, 且這段是裡面第一個名稱 | 好運符列的圖示另外掛一個通貨徽章 (兩個目標); 總覽列一列好幾件 |
+
+兩層這個上限不是隨手寫的。裝備列是「圖示盒 + 名稱盒」並排, 圖示就在第 2 層;
+再往上就會抓到整列, 而 Droptimizer 總覽列的右邊還掛著欄位標籤。`Best` / `Priority`
+/ `Sort` 有在字典裡 (所以「字典翻得動就不是裝備名」保得住), 但賭博類來源的
+`Gamble` / `Buy` 沒有 -- 那一列如果剛好只掉一件裝備, 這些標籤就會被改成那件裝備
+的名字。
+
+列不符合就維持站方原文: 改版長出新形狀時, 最壞的結果是「沒翻」而不是「翻錯」。
+
+2026-10-17 在一份 Bonus Roll Droptimizer 報告 (`好運符 總覽` 面板) 上實測, 整個
+面板 0 筆改名。值得記下的是那一頁有兩段**英文**名稱 `Kith'ix` 與
+`The Unbinding of Kith'ix` -- `game-names-tw.js` 裡查不到這兩筆 (產生器還沒跟上
+新團本), 所以「副本／首領名不是裝備名」那道守門**對它們沒有生效**; 真正擋下它們
+的是這裡的形狀規則 (圖示排在名稱後面、同一層 4 件不同物品)。只靠譯名表會漏, 就是
+這個樣子。
+
 #### 字典翻得動的字串, 一律不是裝備名
 
 `registerNonItemNameCheck(fn)` 讓站台腳本把自己的 `translateText` 傳進來。原本只有
@@ -354,7 +385,7 @@ node tools/generate-game-names.mjs --self-test   # 產生器模板
 
 - **raidbots**: Droptimizer 輸入頁 / 結果圖表 / Top Gear 卡片 / Vault 區塊 / 語言選單切換 /
   **Top Gear 報告頁**（`/simbot/report/<id>`：最佳配裝清單的品名與附魔、比較列的
-  圖示下標、變體隱藏提示）
+  圖示下標、變體隱藏提示、「大秘寶庫 總覽」每一列的品名）
 - **archon**: build 頁的麵包屑、頁籤、天賦 tooltip
 - **bloodmallet**: `/`（spec table）、`/chart/...`（圖表 + Character profile）、`/settings/general`
 - **KeystoneLoot**: `/en/classes`、`/en/classes/warrior/arms`（職業／專精、站方 UI、裝備連結與 SPA 導航）
@@ -452,10 +483,18 @@ Wowhead widget 只碰文字節點。
   raidbots 自訂標籤（把 Mechagon 拆成工坊／廢料場、DOTI 與 Tazavesh 的分段等）。
 - `wowhead-dual-language-title.user.js` 仍完全獨立，沒有共用 helper。
 - archon 尚未像 raidbots 那樣實地驗證過。
-- Top Gear 報告頁的「大秘寶庫 總覽」面板品名仍是英文: 面板標題含 summary,
-  被 `excludedPanelKeywords` 整塊排除 (那條排除是為了擋好運符／地城總覽列的
-  首領名被當成裝備名)。有了上面那幾條配對守則之後也許可以放行, 但要先在
-  Droptimizer 的總覽列上驗過才能動。
+- 「大秘寶庫 總覽」已於 2026-10-17 (helper v1.10.0) 放行, 走 `isSingleItemRow()`
+  的形狀守則。兩邊都實地驗過: Top Gear 報告 7 列品名全部正確 (以同一列長條圖連結
+  的繁中名當對照), Bonus Roll Droptimizer 報告的 `好運符 總覽` 面板 0 筆改名。
+  **還沒驗到的只剩一種列**: 帶好運符伴隨模擬時長在寶庫面板裡的好運符列 (名稱是
+  首領名, 圖示另掛通貨徽章 -> 同一層兩個目標)。要驗它需要一份有 bonus roll
+  companion 的 Top Gear 大秘寶庫報告。
+- raidbots 字典缺賭博類來源的 `Gamble` / `Buy` / `Gamble/Buy`, 以及好運符列的
+  `Bonus Roll · N in pool`。補之前要先在有這些欄位的報告上看過上下文。
+- `game-names-tw.js` 查不到 `Kith'ix` / `The Unbinding of Kith'ix` (2026-10-17 的
+  Droptimizer 報告上是英文)。新團本的 Journal 資料還沒進生成檔 -- 重跑
+  `node tools/generate-game-names.mjs` 看 wago.tools 是否已經有, 有就順便 bump
+  `game-names-tw.js?v=`。
 - bloodmallet 已於瀏覽器實地驗證（2026-08-29，v0.8.0）：語言表註冊、bar tooltip
   回填、`/index.html` 首頁翻譯三項都確認生效。
 
