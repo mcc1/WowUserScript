@@ -1,6 +1,6 @@
 /**
  * Wowhead Traditional Chinese Helper Library (WowheadTwHelper)
- * @version 1.8.1
+ * @version 1.9.0
  * @description Shared library for UserScripts to localize Wowhead links, tooltips, and handle SPA dynamic updates safely.
  * @license MIT
  */
@@ -82,6 +82,7 @@
       );
 
       this.nonItemNames = new Set();
+      this.nonItemNameChecks = [];
       this.dungeonKeys = new Set();
       this.gameNameLookup = null;
       this.wowheadRefreshTimer = null;
@@ -114,6 +115,21 @@
         if (typeof name === 'string' && name.trim()) {
           this.nonItemNames.add(name.trim().toLowerCase());
         }
+      }
+    }
+
+    /**
+     * 註冊「這段文字是站台 UI 字串」的判斷函式。
+     *
+     * 站台自己產生的字串不一定能逐字列舉（raidbots 的「3 variations hidden」
+     * 數字會變），字典列不到就會被探針當成裝備名改寫掉；而且探針跑在翻譯之前，
+     * 使用者看到的是物品名而不是譯文。呼叫端把自己的 translateText 包成判斷函式
+     * 傳進來，字典翻得動的字串一律不當裝備名。
+     * @param {(text: string) => boolean} check
+     */
+    registerNonItemNameCheck(check) {
+      if (typeof check === 'function') {
+        this.nonItemNameChecks.push(check);
       }
     }
 
@@ -601,6 +617,20 @@
       // 連結，接著被 Wowhead widget 改寫成該物品的資料庫名稱，徽章就被整個換掉了。
       if (value.length <= 5 && !/[a-z]/.test(value)) return false;
 
+      // Raidbots 在 Top Gear 比較列的每個圖示下面標的是附魔簡碼 + 階級
+      // （Avoid2 / CritPct2 / Pri2 —— 站方 JS 的 shortName 加上附魔等級）。
+      // 單一個詞尾端接數字不會是裝備名，暴雪的名稱不長這樣。不擋掉的話整列
+      // 簡碼都會被改寫成那一列主裝備的名稱，蓋在圖示上。
+      if (/^[A-Za-z]+\d+$/.test(value)) return false;
+
+      for (const check of this.nonItemNameChecks) {
+        try {
+          if (check(value)) return false;
+        } catch (error) {
+          // 呼叫端的判斷函式壞掉不該讓整個掃描停擺
+        }
+      }
+
       return true;
     }
 
@@ -637,6 +667,141 @@
     }
 
     /**
+     * 容器裡除了目前這段文字以外，還掛著別的名稱文字嗎？
+     * @param {Element} container
+     * @param {Element} textElement
+     * @returns {boolean}
+     */
+    containsOtherNameText(container, textElement) {
+      for (const leaf of container.querySelectorAll('p,span,div,a')) {
+        if (leaf.childElementCount !== 0) continue;
+        if (leaf === textElement || leaf.contains(textElement) || textElement.contains(leaf)) continue;
+        // 先用便宜的條件擋掉數字、符號、空白 —— isNameTextLeaf 會一路查到站台字典，
+        // 每個連結的每一層祖先都要掃一遍葉節點，不先擋會很貴。
+        const text = (leaf.textContent || '').trim();
+        if (text.length < 2 || !/[A-Za-z一-龥]/.test(text)) continue;
+        if (this.isNameTextLeaf(leaf)) return true;
+      }
+      return false;
+    }
+
+    /**
+     * 這個葉節點是（或曾經是）一段名稱嗎？
+     *
+     * 翻完的名稱是中文，`isLikelyItemOrEnchantName` 會說它不是名稱 —— 於是附魔
+     * 譯好之後，它的圖示就「沒有主人」了，同一塊裡排在後面的附加文字會接手把
+     * 自己改成附魔名。看自己蓋的記號，譯過的名稱一樣算數。
+     * @param {Element} leaf
+     * @returns {boolean}
+     */
+    isNameTextLeaf(leaf) {
+      const data = leaf.dataset || {};
+      if (data.twWowheadTextRenameSource || data.twWowheadRenaming === 'true') return true;
+      if (data.twWowheadLinked === 'true' || data.twIconRenamed === 'true') return true;
+      return this.isLikelyItemOrEnchantName((leaf.textContent || '').trim());
+    }
+
+    /**
+     * 這個圖示是不是已經被它自己那一組的名稱認領了？
+     *
+     * Raidbots 的附魔與寶石是自成一組的小單元：一個小圖示連結配一段自己的名稱。
+     * 外層的裝備名稱若把這種單元裡的圖示當成來源，就會被改寫成附魔或寶石的名字
+     * —— 畫面上完全合理，但那是錯的資訊（Top Gear 的「最佳配裝」清單整欄裝備名
+     * 都被換成該件的附魔名，2026-10-17 回報）。
+     * 從連結往上走到 container 為止，只要中途某一層同時裝著這個圖示與別的名稱
+     * 文字，圖示就屬於那段文字，不是這一段的。
+     * @param {HTMLAnchorElement} link
+     * @param {Element} container
+     * @param {Element} textElement
+     * @returns {boolean}
+     */
+    isIconLinkClaimedByOtherName(link, container, textElement) {
+      let node = link.parentElement;
+      // 小單元不會深到哪裡去；限制層數免得在大容器裡逐層掃整棵樹。
+      for (let depth = 0; depth < 8 && node instanceof Element && node !== container; depth += 1) {
+        if (!node.contains(textElement) && this.containsOtherNameText(node, textElement)) return true;
+        node = node.parentElement;
+      }
+      return false;
+    }
+
+    /**
+     * 取出容器內可以當作「這段文字的圖示」的 Wowhead 連結
+     * @param {Element} container
+     * @param {Element} textElement
+     * @returns {HTMLAnchorElement[]}
+     */
+    collectIconLinks(container, textElement, options = {}) {
+      const { requirePrecedes = false, excludeWithin = null } = options;
+      const links = [];
+      for (const link of container.querySelectorAll(WOWHEAD_ITEM_OR_SPELL_LINK)) {
+        if (!(link instanceof HTMLAnchorElement)) continue;
+        if (link.contains(textElement) || textElement.contains(link)) continue;
+        if (link.dataset.twWowheadLinked === 'true') continue;
+        // 名稱自己那一塊裡面的圖示是掛在這件裝備上的寶石／附魔，第 1 步已經判過，
+        // 往上找的時候不要再撿回來（項鍊的寶石圖示就塞在品名下面那一行）。
+        if (excludeWithin instanceof Element && excludeWithin.contains(link)) continue;
+        // 同一塊裡面，圖示排在名稱前面才是「這個名稱的圖示」（附魔／寶石小單元
+        // 都是圖示在左、名稱在右）；排在名稱後面的是掛在它身上的東西。
+        // 只在這一層成立：裝備列本身在右欄是鏡像排版，圖示反而在文字後面。
+        if (requirePrecedes && !(link.compareDocumentPosition(textElement) & Node.DOCUMENT_POSITION_FOLLOWING)) continue;
+        if (this.isIconLinkClaimedByOtherName(link, container, textElement)) continue;
+        links.push(link);
+      }
+      return links;
+    }
+
+    /**
+     * 這段文字是容器裡第一個名稱嗎？
+     *
+     * 一個圖示只配一段名稱。raidbots 的裝備列在品名後面還會掛沒有自己圖示的
+     * 附加文字（Venomcursed Mastery 這類鑲飾效果），那些文字抓到的是同一個
+     * 裝備圖示，結果整列看起來像兩件裝備。排在後面的一律放過不翻。
+     * @param {Element} container
+     * @param {Element} textElement
+     * @returns {boolean}
+     */
+    isFirstNameTextIn(container, textElement) {
+      for (const leaf of container.querySelectorAll('p,span,div,a')) {
+        if (leaf.childElementCount !== 0) continue;
+        if (leaf === textElement) return true;
+        if (leaf.contains(textElement) || textElement.contains(leaf)) continue;
+        if (this.isNameTextLeaf(leaf)) return false;
+      }
+      return true;
+    }
+
+    /**
+     * Catalyst／轉化列會同時有原始掉落物與轉化後的主物品連結。
+     * `original-item=` 是掛在主物品 URL 上的來源指標，不是要選取的 ID；
+     * 優先選它，不能只依賴 DOM 目前的排列順序。
+     * @param {HTMLAnchorElement[]} links
+     * @returns {HTMLAnchorElement|null}
+     */
+    pickTransformedLink(links) {
+      const transformed = links.filter((link) => {
+        const href = link.getAttribute('href') || '';
+        const dataWowhead = link.getAttribute('data-wowhead') || '';
+        return /(?:[?&])original-item=\d+/i.test(href) || /(?:^|&)original-item=\d+/i.test(dataWowhead);
+      });
+      return transformed.length === 1 ? transformed[0] : null;
+    }
+
+    /**
+     * 這組連結指向幾件不同的物品／法術／通貨
+     * @param {HTMLAnchorElement[]} links
+     * @returns {number}
+     */
+    countDistinctLinkTargets(links) {
+      const targets = new Set();
+      for (const link of links) {
+        const match = (link.getAttribute('href') || '').match(/\/(item|spell|currency)(?:=|\/)(\d+)/i);
+        if (match) targets.add(`${match[1].toLowerCase()}=${match[2]}`);
+      }
+      return targets.size;
+    }
+
+    /**
      * 尋找文字節點周圍唯一的 Wowhead 圖示連結
      * @param {Element} textElement
      * @returns {HTMLAnchorElement|null}
@@ -651,23 +816,20 @@
             )
           : null;
 
-      const findCardLink = (card) => {
-        const links = [];
-        for (const link of card.querySelectorAll(WOWHEAD_ITEM_OR_SPELL_LINK)) {
-          if (!(link instanceof HTMLAnchorElement)) continue;
-          if (link.contains(textElement) || textElement.contains(link)) continue;
-          if (link.dataset.twWowheadLinked === 'true') continue;
-          links.push(link);
-        }
+      // 名稱自己那一塊：裡面的圖示是掛在這件裝備上的寶石／附魔，只有第 1 步
+      // （圖示排在名稱前面的小單元）可以用，其他路徑一律跳過。
+      const nameBlock = textElement.parentElement instanceof Element ? textElement.parentElement : null;
 
-        // Catalyst／轉化列會同時有原始掉落物與轉化後的主物品連結。
-        // `original-item=` 是掛在主物品 URL 上的來源指標，不是要選取的 ID；
-        // 優先選它，不能只依賴 DOM 目前的排列順序。
-        const transformedLink = links.find((link) => {
-          const href = link.getAttribute('href') || '';
-          const dataWowhead = link.getAttribute('data-wowhead') || '';
-          return /(?:[?&])original-item=\d+/i.test(href) || /(?:^|&)original-item=\d+/i.test(dataWowhead);
-        });
+      const findCardLink = (card) => {
+        const links = this.collectIconLinks(card, textElement, { excludeWithin: nameBlock });
+
+        // 一件裝備最多兩個連結：主物品與催化前的原始掉落物。超過就代表這張
+        // 「卡片」裝的是一整套裝備 —— Top Gear 的比較列每一列都是 13 件裝備的
+        // 圖示，卻和 Droptimizer 的單件列共用 data-test="actor-compare-row"。
+        // 那種列裡沒有任何辦法知道文字屬於哪一件，一律不配對。
+        if (this.countDistinctLinkTargets(links) > 2) return null;
+
+        const transformedLink = this.pickTransformedLink(links);
         if (transformedLink) return transformedLink;
 
         // 沒有轉化來源標記時，維持站方物品卡片的既有順序：第一個有效
@@ -706,9 +868,13 @@
             return fakeLink;
           }
         }
-        const directLink = immediateParent.querySelector(WOWHEAD_ITEM_OR_SPELL_LINK);
-        if (directLink instanceof HTMLAnchorElement && !directLink.contains(textElement) && !textElement.contains(directLink)) {
-          return directLink;
+        // 只收「沒有被別的名稱認領」的圖示：附魔／寶石小單元自己的圖示不算，
+        // 否則裝備名會被換成那條附魔的名字。
+        const directLinks = this.collectIconLinks(immediateParent, textElement, { requirePrecedes: true });
+        if (directLinks.length && this.isFirstNameTextIn(immediateParent, textElement)) {
+          if (directLinks.length === 1) return directLinks[0];
+          const transformedLink = this.pickTransformedLink(directLinks);
+          if (transformedLink && this.countDistinctLinkTargets(directLinks) <= 2) return transformedLink;
         }
       }
 
@@ -724,21 +890,22 @@
         ancestor = ancestor.parentElement;
         if (!(ancestor instanceof Element)) continue;
 
-        const links = ancestor.querySelectorAll(WOWHEAD_ITEM_OR_SPELL_LINK);
-        const mainLinks = [];
-        for (const link of links) {
-          if (!(link instanceof HTMLAnchorElement)) continue;
-          if (link.contains(textElement) || textElement.contains(link)) continue;
-          if (link.dataset.twWowheadLinked === 'true') continue;
-          mainLinks.push(link);
-        }
+        const mainLinks = this.collectIconLinks(ancestor, textElement, { excludeWithin: nameBlock });
 
         // 如果這個祖先節點內還沒有包含圖示，繼續往上層祖先搜尋
         if (mainLinks.length === 0) continue;
 
-        // 如果這個祖先節點內包含多於 1 個裝備圖示（如好運符/地城總覽清單行），
-        // 該列文字為地城/首領名稱，絕對不可關聯！直接返回 null
-        if (mainLinks.length > 1) return null;
+        // 這個圖示已經有自己的名稱排在前面了，這一段是附加文字，不要配對
+        if (!this.isFirstNameTextIn(ancestor, textElement)) return null;
+
+        // 多於 1 個圖示時只有一種情況可以救：那是同一件裝備的圖示堆疊
+        // （主物品 + 催化前的原始掉落物）。其餘（好運符／地城總覽列）該列文字
+        // 是地城/首領名稱，絕對不可關聯，直接返回 null。
+        if (mainLinks.length > 1) {
+          const transformedLink = this.pickTransformedLink(mainLinks);
+          if (transformedLink && this.countDistinctLinkTargets(mainLinks) <= 2) return transformedLink;
+          return null;
+        }
 
         // 恰好只有 1 個裝備圖示，成功找到唯一對應的物品圖示
         return mainLinks[0];

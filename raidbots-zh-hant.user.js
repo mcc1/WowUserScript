@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.7.2
+// @version      1.8.0
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
 // @match        https://raidbots.com/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.8.1
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.9.0
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=2
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/raidbots-zh-hant.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/raidbots-zh-hant.user.js
@@ -264,6 +264,25 @@
     Sort: '排序',
     Priority: '優先順序',
     'Expected Value': '期望值',
+    // Top Gear 報表頁（2026-10 實地掃描補上的站台字串）
+    'Great Vault': '大秘寶庫',
+    'Vault Item': '寶庫物品',
+    'Best Combination': '最佳組合',
+    'Best Case': '最佳情況',
+    Guaranteed: '保證獲得',
+    'Guaranteed DPS': '保證獲得的 DPS',
+    'No vault reward': '沒有寶庫獎勵',
+    'Equipped Gear - Optimized': '已裝備的裝備 - 已最佳化',
+    'Prefer Fewest Changes if Sidegrade': '同等結果時優先更動最少',
+    'Show Gem/Enchant Variations': '顯示寶石／附魔變體',
+    'Shopping List': '購物清單',
+    'Total upgrade cost:': '總升級花費：',
+    'More Details': '更多細節',
+    // 副屬性警告句被物品連結切成好幾段，逐段翻
+    'You have': '你的',
+    'with a large secondary stat proc and': '有大量副屬性觸發效果，而本次模擬中有',
+    'in this sim change your highest secondary stat (marked with a warning icon below) - this can cause surprising sim results!':
+      '改變了你最高的副屬性（下方以警告圖示標記）- 這可能導致意外的模擬結果！',
     Best: '最佳',
     'Show All Variations': '顯示所有變體',
     'Go to equipped': '跳到目前裝備',
@@ -892,9 +911,11 @@
     }
 
     // 報表標題是站方用「 • 」串起來的：Droptimizer • Bonus Rolls • Heroic + M10 • Myth 6/6
-    if (trimmed.includes(' • ')) {
+    // Top Gear 的標題與寶庫列則是「 · 」：Top Gear · Great Vault、Vault Item · Chest
+    const joiner = [' • ', ' · '].find((separator) => trimmed.includes(separator));
+    if (joiner) {
       let changed = false;
-      const pieces = trimmed.split(' • ').map((piece) => {
+      const pieces = trimmed.split(joiner).map((piece) => {
         const pieceTw = EXACT_TW[piece] || EXACT_TW_CI[piece.toLowerCase()];
         if (pieceTw) {
           changed = true;
@@ -909,13 +930,18 @@
         return piece;
       });
       if (changed) {
-        return replaceTrimmed(text, trimmed, pieces.join(' • '));
+        return replaceTrimmed(text, trimmed, pieces.join(joiner));
       }
     }
 
     const bossTargetMatch = trimmed.match(/^(\d+)\s+boss\s+targets?$/i);
     if (bossTargetMatch) {
       return replaceTrimmed(text, trimmed, `${bossTargetMatch[1]} 個首領目標`);
+    }
+
+    const resultCountMatch = trimmed.match(/^(\d+)\s+results?$/i);
+    if (resultCountMatch) {
+      return replaceTrimmed(text, trimmed, `${resultCountMatch[1]} 個結果`);
     }
 
     const variationHiddenMatch = trimmed.match(/^(\d+)\s+variations?\s+hidden$/i);
@@ -1185,6 +1211,62 @@
     }
   }
 
+  // 一段相鄰的文字節點裡，找出合起來翻得動的那幾個。
+  // 譯文寫回該段的第一個節點、其餘清空 —— 節點數量不變，React 之後要更新也
+  // 還找得到自己的節點（刪節點會讓它找不到而炸掉）。
+  const MAX_JOINED_TEXT_NODES = 4;
+
+  function translateTextNodeRun(nodes) {
+    for (let size = Math.min(MAX_JOINED_TEXT_NODES, nodes.length); size >= 2; size -= 1) {
+      for (let start = 0; start + size <= nodes.length; start += 1) {
+        const window = nodes.slice(start, start + size);
+        const joined = window.map((node) => node.nodeValue || '').join('');
+        if (!joined.trim()) continue;
+
+        const translated = translateText(joined);
+        if (!translated || translated === joined) continue;
+
+        window[0].nodeValue = translated;
+        for (let index = 1; index < size; index += 1) {
+          window[index].nodeValue = '';
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // 站方把一句話拆成好幾個文字節點 —— React 的 `{n} variation{s} hidden` 會切成
+  // "3" / " variation" / "s" / " hidden"，逐節點比對永遠比不到字典，使用者看到的
+  // 就是中英夾雜。相鄰的文字節點合起來再查一次字典。
+  function translateSplitTextElements(root) {
+    const scope = root instanceof Document ? root.body : root;
+    if (!(scope instanceof Element)) {
+      return;
+    }
+
+    const elements = [scope];
+    for (const element of scope.querySelectorAll('p,span,div,td,th,li,label,button,a')) {
+      elements.push(element);
+    }
+
+    for (const element of elements) {
+      if (element.childNodes.length < 2) continue;
+      if (shouldSkipElement(element)) continue;
+
+      let run = [];
+      for (const child of element.childNodes) {
+        if (child.nodeType === Node.TEXT_NODE) {
+          run.push(child);
+          continue;
+        }
+        if (run.length > 1) translateTextNodeRun(run);
+        run = [];
+      }
+      if (run.length > 1) translateTextNodeRun(run);
+    }
+  }
+
   function translateAttribute(element, name) {
     const value = element.getAttribute(name);
     if (!value) {
@@ -1244,9 +1326,30 @@
   }
 
   function translateDocumentTitle() {
-    const translated = translateText(document.title);
-    if (translated && translated !== document.title) {
+    const title = document.title;
+    if (!title) {
+      return;
+    }
+
+    const translated = translateText(title);
+    if (translated && translated !== title) {
       document.title = translated;
+      return;
+    }
+
+    // 標題是站方用「 - 」串起來的：Top Gear · Great Vault - 角色 - 194,805 DPS - Raidbots
+    // 整串比不到字典，逐段翻再接回去。
+    let changed = false;
+    const segments = title.split(' - ').map((segment) => {
+      const segmentTw = translateText(segment);
+      if (segmentTw && segmentTw !== segment) {
+        changed = true;
+        return segmentTw;
+      }
+      return segment;
+    });
+    if (changed) {
+      document.title = segments.join(' - ');
     }
   }
 
@@ -1259,6 +1362,7 @@
         onScan: (root) => {
           translateAttributesInTree(root);
           walkTextNodes(root);
+          translateSplitTextElements(root);
           translateDocumentTitle();
         },
         onUrlChange: () => {
@@ -1271,6 +1375,10 @@
     whHelper.registerNonItemNames(Object.keys(EXACT_TW));
     // 徽章短碼疊在裝備圖示上，絕不能被 linkify 成物品連結
     whHelper.registerNonItemNames(Object.keys(ITEM_BADGE_TW));
+    // 字典翻得動的字串都是站台 UI 文字，不是裝備名。純文字改名探針跑在翻譯
+    // 之前（flushPendingRoots 的順序），不擋的話「3 variations hidden」這種
+    // 帶數字、字典列不完的樣板會先被改寫成該列裝備的名稱，譯文永遠沒機會上。
+    whHelper.registerNonItemNameCheck((text) => translateText(text) !== null);
     whHelper.registerDungeonMap(DUNGEON_TW_MAP);
     whHelper.registerGameNameLookup(lookupGameName);
     whHelper.start();
@@ -1280,6 +1388,7 @@
       if (!root) return;
       translateAttributesInTree(root);
       walkTextNodes(root);
+      translateSplitTextElements(root);
       translateDocumentTitle();
     };
     const startFallback = () => {

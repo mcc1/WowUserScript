@@ -179,6 +179,37 @@ Wowhead widget 改名的方式是**把整個 `innerHTML` 換成 `<span>名稱</s
 `false`。目前只有 bloodmallet 設 true，因為那邊的連結裡只有文字。**測試時不要順手加上
 它**，會得出「探針破壞了圖示」的錯誤結論（實際上是這個旗標幹的）。
 
+#### 一段文字要配哪一個圖示 -- 配錯比沒翻更糟
+
+`findNearestWowheadIconLink()` 幫沒有連結的純文字找「它自己的」圖示, 探針再用那個
+圖示的 href 去 Wowhead 拿繁中名回寫。配錯的代價不是漏翻, 是**整欄換成別件裝備的
+名字, 而且看起來完全合理** -- 2026-10-17 的 Top Gear 報告頁就是這樣: 每件裝備的
+品名都被改成它自己那條附魔的名字, 項鍊變成鑲在上面的寶石名。使用者沒有任何線索
+知道那是錯的。
+
+所以這個函式的每一條規則都是「寧可不配對」, 不是「盡量配到」:
+
+| 規則 | 為什麼 |
+|---|---|
+| 圖示被別的名稱認領過就不算 (`isIconLinkClaimedByOtherName`) | 附魔／寶石是自成一組的小單元 (圖示 + 自己的名稱)。外層的品名撿走裡面的圖示就會變成附魔名 |
+| 名稱自己那一塊裡的圖示只有第 1 步能用 (`excludeWithin`) | 品名底下那一行掛的是這件裝備的寶石與附魔, 比裝備本體的圖示更近 |
+| 第 1 步要求圖示排在名稱前面 (`requirePrecedes`) | 小單元一律圖示在左。**只在這一層成立** -- 裝備清單右欄是鏡像排版, 圖示在文字後面 |
+| 容器裡排第二的名稱一律不配 (`isFirstNameTextIn`) | 一個圖示只配一段名稱。品名後面還會掛沒有自己圖示的附加文字 (鑲飾效果 Venomcursed Mastery), 那段抓到的會是同一個圖示 |
+| 物品卡片內超過兩件不同物品就不配 | 一件裝備最多兩個連結 (主物品 + 催化前的原始掉落物)。Top Gear 的比較列每列是 13 件裝備, 卻和 Droptimizer 的單件列共用 `data-test="actor-compare-row"` |
+
+`isNameTextLeaf()` 會把**已經翻好的**名稱也算成名稱 (看自己蓋的 `data-tw-*` 記號)。
+少了這一條就會有順序相依的 bug: 附魔翻成中文之後, `isLikelyItemOrEnchantName` 說它
+不是名稱, 它的圖示變成「沒有主人」, 同一塊裡排在後面的附加文字就接手把自己改成
+附魔名 -- 重整一次好一次壞。
+
+#### 字典翻得動的字串, 一律不是裝備名
+
+`registerNonItemNameCheck(fn)` 讓站台腳本把自己的 `translateText` 傳進來。原本只有
+`registerNonItemNames(Object.keys(EXACT_TW))`, 逐字列舉, 帶數字的樣板一定漏 --
+「3 variations hidden」就漏了 (字典只列了 `1 variation hidden`), 於是整欄被改成
+裝備名。探針跑在翻譯**之前** (`flushPendingRoots` 的順序), 漏一個就等於譯文永遠
+沒機會上。
+
 ### 各站腳本的共同形狀
 
 ```
@@ -190,6 +221,19 @@ new WowheadTwHelper({ onScan, onUrlChange })
 
 `translatedNodeText` 是 `WeakMap<TextNode, string>` 快取；URL 變更時**必須**重建
 （`translatedNodeText = new WeakMap()`），否則 SPA 換頁後舊節點被誤判為已翻譯。
+
+#### 站方把一句話拆成好幾個文字節點時
+
+React 的 `{n} variation{s} hidden` 在 DOM 裡是四個文字節點: `"3"` / `" variation"` /
+`"s"` / `" hidden"`。逐節點比字典永遠比不到, 使用者看到的就是中英夾雜。raidbots 的
+`translateSplitTextElements()` 把**相鄰的**文字節點 2~4 個一組合起來再查一次字典,
+譯文寫回該組第一個節點, 其餘清空。
+
+**不要刪節點** -- 節點數量要保持原樣, 否則 React 之後要更新時找不到自己的節點會炸。
+這也讓整件事是冪等的: 合起來已經是中文, `translateText` 回 null, 不會再動。
+
+有了這個機制, 像 `'« Back to'`、`'boss target'` 那種為了對付拆節點而硬塞的碎片字典
+條目就是最後手段, 不是第一選擇。
 
 ### 能從網址算出來的東西，不要等 DOM
 
@@ -308,7 +352,9 @@ node tools/generate-game-names.mjs --self-test   # 產生器模板
 
 然後在瀏覽器實測（Tampermonkey 指向本機檔案或暫時貼上）：
 
-- **raidbots**: Droptimizer 輸入頁 / 結果圖表 / Top Gear 卡片 / Vault 區塊 / 語言選單切換
+- **raidbots**: Droptimizer 輸入頁 / 結果圖表 / Top Gear 卡片 / Vault 區塊 / 語言選單切換 /
+  **Top Gear 報告頁**（`/simbot/report/<id>`：最佳配裝清單的品名與附魔、比較列的
+  圖示下標、變體隱藏提示）
 - **archon**: build 頁的麵包屑、頁籤、天賦 tooltip
 - **bloodmallet**: `/`（spec table）、`/chart/...`（圖表 + Character profile）、`/settings/general`
 - **KeystoneLoot**: `/en/classes`、`/en/classes/warrior/arms`（職業／專精、站方 UI、裝備連結與 SPA 導航）
@@ -333,6 +379,17 @@ node tools/generate-game-names.mjs --self-test   # 產生器模板
    被 linkify 換掉的文字，翻譯階段永遠看不到。改字典救不了這種問題。
 2. 新增任何疊在圖示上的短標籤時，要一併加進 `registerNonItemNames`。
    函式庫本身已擋掉「5 字元以內的全大寫字串」（真正的裝備名一定含小寫字母）。
+
+## raidbots Top Gear 比較列的 `Avoid2` 不是裝備名
+
+比較列每個圖示下面那行小字 (`Avoid2`、`CritPct2`、`Pri2`) 是**附魔簡碼 + 階級**:
+站方 JS 裡每條附魔都有 `shortName`, `CritPct` 對應的是 Eyes of the Eagle。新改版會
+長出新的簡碼, 數字也會變, 所以這是**列不完的**, 不要想用字典蓋過去 -- 函式庫擋的是
+形狀: 單一個詞尾端接數字 (`/^[A-Za-z]+\d+$/`) 不會是裝備名。
+
+這些簡碼原本會被純文字改名探針整欄改成那一列主裝備的名字, 蓋在圖示上 (使用者回報
+「報告頁面怪怪的」, 2026-10-17)。維持英文是刻意的: 譯成中文會變長, 擠爆 28px 的格子,
+而且站方沒有對應的官方字串可查。
 
 ## bloodmallet 的陷阱（踩過一次，別再踩）
 
@@ -395,6 +452,10 @@ Wowhead widget 只碰文字節點。
   raidbots 自訂標籤（把 Mechagon 拆成工坊／廢料場、DOTI 與 Tazavesh 的分段等）。
 - `wowhead-dual-language-title.user.js` 仍完全獨立，沒有共用 helper。
 - archon 尚未像 raidbots 那樣實地驗證過。
+- Top Gear 報告頁的「大秘寶庫 總覽」面板品名仍是英文: 面板標題含 summary,
+  被 `excludedPanelKeywords` 整塊排除 (那條排除是為了擋好運符／地城總覽列的
+  首領名被當成裝備名)。有了上面那幾條配對守則之後也許可以放行, 但要先在
+  Droptimizer 的總覽列上驗過才能動。
 - bloodmallet 已於瀏覽器實地驗證（2026-08-29，v0.8.0）：語言表註冊、bar tooltip
   回填、`/index.html` 首頁翻譯三項都確認生效。
 
