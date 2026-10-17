@@ -208,6 +208,27 @@ Wowhead widget 改名的方式是**把整個 `innerHTML` 換成 `<span>名稱</s
   又正常，所以這是競態不是資料缺漏（那幾件的 zhTW 名稱 Wowhead 都有）。
   `INVALID_PROBE_TEXTS` 把 `undefined` / `null` 當成「還沒好」繼續重試。
 
+#### 連結裡「看不見的文字」也會被改名 —— 然後就變得看得見
+
+`patchWowheadLinks` 原本只問「這個連結有沒有文字」。raidbots 圖表上的圓點是這樣的:
+
+```html
+<a href="/item=271495" style="position:absolute; width:8px; height:8px; border-radius:50%">
+  <span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">
+    Skulking Viper's Scuteplate            給螢幕閱讀器的品名，畫面上看不到
+  </span>
+</a>
+```
+
+有文字、沒有圖示 -> 掛上改名標記 -> widget 把整個 `innerHTML` 換掉 -> **連隱藏用的
+那層樣式一起沒了**，譯名就直接長在 8px 的圓點裡，一個字一行往下排，整張圖被中文蓋住
+(使用者回報「看起來還是怪怪的」, 2026-10-18)。
+
+所以判斷條件是 `hasVisibleLinkText()`，不是 `textContent`: 直接掛在連結底下的文字節點
+算數，包在元素裡的要先問 `isVisuallyHiddenElement()`(`display:none`、`visibility:hidden`、
+`clip: rect(0,0,0,0)`、`clip-path: inset(50%)`、絕對定位的 1px 方塊)。
+**看到 `aria-label` 和內文重複的連結就要警覺** —— 那通常代表內文是 sr-only 的。
+
 `whTooltips.renameLinks` 是**全域**旗標，設成 true 會讓 widget 改寫頁面上每一個連結 ——
 包含上面那種，圖示和數據一起沒。`setupGlobalLocale()` 刻意不設它，raidbots 還明確設成
 `false`。目前只有 bloodmallet 設 true，因為那邊的連結裡只有文字。**測試時不要順手加上

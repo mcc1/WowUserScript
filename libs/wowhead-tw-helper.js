@@ -1,6 +1,6 @@
 /**
  * Wowhead Traditional Chinese Helper Library (WowheadTwHelper)
- * @version 1.10.1
+ * @version 1.10.2
  * @description Shared library for UserScripts to localize Wowhead links, tooltips, and handle SPA dynamic updates safely.
  * @license MIT
  */
@@ -582,7 +582,7 @@
           const isItemLink = /\/item(?:=|\/)/.test(newHref);
           const isSpellLink = /\/spell(?:=|\/)/.test(newHref);
           const isCurrencyLink = /\/currency(?:=|\/)/.test(newHref);
-          const hasText = (link.textContent || '').trim().length > 0;
+          const hasText = this.hasVisibleLinkText(link);
           const hasImage = link.querySelector('img') !== null;
           if ((isItemLink || isSpellLink || isCurrencyLink) && hasText && !hasImage && link.dataset.whRenameLink !== 'true') {
             link.dataset.whRenameLink = 'true';
@@ -596,6 +596,61 @@
         this.queueWowheadRefresh();
       }
       return touched;
+    }
+
+    /**
+     * 這個元素是不是「只給螢幕閱讀器看」的？
+     * @param {Element} element
+     * @returns {boolean}
+     */
+    isVisuallyHiddenElement(element) {
+      const view = element.ownerDocument && element.ownerDocument.defaultView;
+      if (!view || typeof view.getComputedStyle !== 'function') return false;
+
+      let style;
+      try {
+        style = view.getComputedStyle(element);
+      } catch (_) {
+        return false;
+      }
+      if (!style) return false;
+      if (style.display === 'none' || style.visibility === 'hidden') return true;
+
+      // sr-only 的幾種標準寫法：clip 成 0、clip-path 夾掉、或縮成 1px 再 overflow hidden。
+      const clip = (style.clip || '').replace(/px/g, '');
+      if (/^rect\(\s*0[,\s]+0[,\s]+0[,\s]+0\s*\)$/.test(clip.trim())) return true;
+      if (/inset\(\s*(?:50%|100%)/.test(style.clipPath || '')) return true;
+      if (style.position === 'absolute' && parseFloat(style.width) <= 1 && parseFloat(style.height) <= 1) {
+        return true;
+      }
+      return false;
+    }
+
+    /**
+     * 連結裡的文字是不是真的看得見？
+     *
+     * raidbots 圖表上的圓點是 8px 的 `<a>`，裡面放一個 sr-only 的 `<span>` 裝品名
+     * 給螢幕閱讀器。那段文字畫面上看不到，但 widget 改名是**把整個 innerHTML 換成
+     * `<span>名稱</span>`** —— 隱藏用的樣式一起被換掉，譯名就直接長在 8px 的圓點
+     * 裡，一個字一行往下排，蓋住整張圖（使用者回報「看起來還是怪怪的」，
+     * 2026-10-18）。看不見的文字一律不掛改名標記。
+     * @param {HTMLAnchorElement} link
+     * @returns {boolean}
+     */
+    hasVisibleLinkText(link) {
+      if (!(link.textContent || '').trim()) return false;
+
+      // 直接掛在連結底下的文字節點沒有被包起來，一定看得見。
+      for (const node of link.childNodes) {
+        if (node.nodeType === Node.TEXT_NODE && (node.nodeValue || '').trim()) return true;
+      }
+
+      for (const element of link.querySelectorAll('*')) {
+        if (!(element.textContent || '').trim()) continue;
+        if (this.isVisuallyHiddenElement(element)) continue;
+        return true;
+      }
+      return false;
     }
 
     /**
