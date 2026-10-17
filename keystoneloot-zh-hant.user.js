@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         KeystoneLoot Traditional Chinese
 // @namespace    https://keystoneloot.io/
-// @version      0.5.0
+// @version      0.5.1
 // @description  Translate KeystoneLoot WoW class pages to Traditional Chinese and patch Wowhead links.
 // @author       mcc
 // @match        https://keystoneloot.io/en/*

@@ -379,10 +379,11 @@ bloodmallet 要從 `translate_death_knight` 這種 CSS class 認出職業 ——
 
 ## 發版流程（重要，容易漏）
 
-改 `libs/wowhead-tw-helper.js` 時，**兩處要同步更新**：
+改 `libs/wowhead-tw-helper.js` 時，**三處要同步更新**：
 
 1. `libs/wowhead-tw-helper.js` 的 JSDoc `@version`
-2. 三支 `.user.js` 的 `@require ...wowhead-tw-helper.js?v=X.Y.Z`
+2. 每一支 `.user.js` 的 `@require ...wowhead-tw-helper.js?v=X.Y.Z`
+3. **那幾支 `.user.js` 自己的 `@version`**
 
 `?v=` 是 cache buster — 使用者的 userscript manager 以完整 URL 當 `@require` 的快取 key，
 不改 query string 就永遠拿到舊版函式庫。重跑產生器後也要 bump
@@ -391,6 +392,21 @@ bloodmallet 要從 `translate_death_knight` 這種 CSS class 認出職業 ——
 ```sh
 grep -n '@version\|?v=' libs/wowhead-tw-helper.js *.user.js
 ```
+
+### 第 3 步漏掉會讓前兩步完全無效
+
+manager 是**比對 `@version`** 決定要不要重新下載腳本的。只改 `@require` 的 `?v=` 而不動
+腳本自己的 `@version`，manager 看到版本一樣就什麼都不做 —— 新的 `?v=` 那行永遠不會
+下載到使用者端，函式庫當然也就停在舊版。
+
+實際事故（2026-10-18）：raidbots v1.9.2 發出去時 `@require` 還指著 helper `?v=1.10.1`；
+十分鐘後 helper 修好發 `?v=1.10.2`，只改了 `@require` 那行沒有 bump 腳本版本。使用者
+在這中間更新到 1.9.2，於是**永久卡在舊 helper**：管理面板顯示 1.9.2（最新版沒錯），
+畫面卻還是壞的，查到最後才發現腳本根本沒再下載過。修法是把四支的 `@version` 都 bump
+一次（v1.9.3 等），使用者再更新一次就會吃到。
+
+> 一句話：**動到 `@require` 那一行，就一定要 bump 該檔的 `@version`。**
+> 要確認使用者端到底在跑哪一版，不要只看管理面板的版本號，請他在頁面 console 驗行為。
 
 改單一站台腳本時只 bump 該檔的 `@version`（版本已刻意 decouple，見 commit `2b76205`）。
 

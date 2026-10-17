@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bloodmallet Traditional Chinese Wowhead
 // @namespace    https://bloodmallet.com/
-// @version      0.10.1
+// @version      0.10.2
 // @description  Add zh-hant mode, switch item links/names to the zh-hant Wowhead locale, and translate class/spec labels.
 // @author       mcc
 // @match        https://bloodmallet.com/*

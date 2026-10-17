@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Archon.gg Traditional Chinese
 // @namespace    https://www.archon.gg/
-// @version      0.12.0
+// @version      0.12.1
 // @description  Translate archon.gg WoW build pages to Traditional Chinese.
 // @author       mcc
 // @match        https://www.archon.gg/wow/*
