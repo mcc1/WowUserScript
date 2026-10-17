@@ -587,7 +587,18 @@ Wowhead widget 只碰文字節點。
 - raidbots 的 `DUNGEON_TW_MAP` 還留 14 筆暴雪 Journal 沒有對應條目的
   raidbots 自訂標籤（把 Mechagon 拆成工坊／廢料場、DOTI 與 Tazavesh 的分段等）。
 - `wowhead-dual-language-title.user.js` 仍完全獨立，沒有共用 helper。
-- archon 尚未像 raidbots 那樣實地驗證過。
+- archon 迴圈頁 (選了戰鬥之後的起手/冷卻/傷害與治療細目/排名樣本) 已於 2026-10-18
+  (v0.13.0) 在 DPS/坦克/治療三種專精與團本首領頁實地驗過。刻意沒翻的是站方逐場手寫的
+  首領階段說明 (`Rav'i feeds at a bone pile …`) 與小怪名 —— 那是每個首領各一段的
+  文案, 不是 UI 字串, 也沒有 ID 可查。
+- archon 的副本／首領標籤是站方自己縮短的 (`Sentinels`、`Nymrissa`、`Sethraliss`),
+  網址 slug 也是同一個短名, 所以 `game-names-tw.js` 查不到。`SHORT_GAME_NAMES` 是
+  「短名 → Journal 英文全名」的英文對英文表, 中文仍由生成檔提供; 新增前先到 wago.tools
+  的 JournalEncounter 確認全名只對應一筆 (`Sethraliss` 同時是副本與首領 Avatar of
+  Sethraliss 的一部分, 模糊比對會配錯)。
+- 站名 Archon 與牧師英雄天賦 Archon (御靈者) 同名。頁首 logo 與擋廣告提示是靠
+  `SKIP_CLASS_KEYWORDS` 的 `rootBreadcrumb` / `fallback__content` 擋下來的, 天賦頁的
+  英雄天賦照常翻。
 - 「大秘寶庫 總覽」已於 2026-10-17 (helper v1.10.0) 放行, 走 `isSingleItemRow()`
   的形狀守則。兩邊都實地驗過: Top Gear 報告 7 列品名全部正確 (以同一列長條圖連結
   的繁中名當對照), Bonus Roll Droptimizer 報告的 `好運符 總覽` 面板 0 筆改名。

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Archon.gg Traditional Chinese
 // @namespace    https://www.archon.gg/
-// @version      0.12.1
+// @version      0.13.0
 // @description  Translate archon.gg WoW build pages to Traditional Chinese.
 // @author       mcc
 // @match        https://www.archon.gg/wow/*
@@ -44,11 +44,22 @@
    * 都需要，但這支腳本原本只查 lookupUnit（種族／職業／專精），從來沒查過這張
    * 表 —— 譯名一直都在產生器的輸出裡，只是沒人去拿。
    */
+  // archon 自己縮短的副本／首領標籤（網址 slug 也是同一個短名）→ Journal 的官方
+  // 英文全名。這是英文對英文，中文仍由 game-names-tw.js 提供。全名用 wago.tools
+  // 的 JournalEncounter / JournalInstance 確認過只對應到一筆；「Sethraliss」不能
+  // 交給模糊比對，因為同一個副本裡還有首領 Avatar of Sethraliss。
+  const SHORT_GAME_NAMES = Object.freeze({
+    'Sentinels': 'Entombed Sentinels',
+    'Explorers': 'The Lost Explorers',
+    'Nymrissa': 'Nymrissa Wavecaller',
+    'Sethraliss': 'Temple of Sethraliss',
+  });
+
   function lookupGameName(value) {
     const table = gameNames();
     if (!table || typeof table.lookup !== 'function' || !value) return null;
     try {
-      return table.lookup(value);
+      return table.lookup(value) || (SHORT_GAME_NAMES[value] ? table.lookup(SHORT_GAME_NAMES[value]) : null);
     } catch (_) {
       return null;
     }
@@ -271,6 +282,60 @@
     'Boss': '首領',
     'All Bosses': '所有首領',
     'Show DPS & HPS': '顯示 DPS & HPS',
+
+    // 迴圈頁（選了一場戰鬥之後）
+    'Opener': '起手',
+    'Cooldowns': '冷卻技能',
+    'Sample': '樣本',
+    'Rankings Sample': '排名樣本',
+    'Fullscreen': '全螢幕',
+    'Offensive': '攻擊',
+    'Defensive': '防禦',
+    'Utility': '輔助',
+    'Externals': '外部增益',
+    'Other': '其他',
+    'Damage Breakdown': '傷害細目',
+    'Healing Breakdown': '治療細目',
+    'Damage Taken Breakdown': '承受傷害細目',
+    'Damage To Bosses': '對首領傷害',
+    'Damage to Bosses': '對首領傷害',
+    'Damage to Adds': '對小怪傷害',
+    'Healing To Tanks': '對坦克治療',
+    'Healing to Tanks': '對坦克治療',
+    'Healing to Non-Tanks': '對非坦克治療',
+    'Damage Mitigated': '減免傷害',
+    // 「Damage Done during <span>秘法奔騰</span>」：span 後面沒有文字節點可以接
+    // 「期間」，只能把說明放前面
+    'Damage Done during': '期間傷害：',
+    'Damage Done to': '對',
+    'Name': '名稱',
+    'Amount': '總量',
+    'Casts': '施放次數',
+    'Avg Cast': '平均施放',
+    'Uptime': '覆蓋率',
+    'Overheal': '過量治療',
+    'Hits': '命中次數',
+    'Avg Hit': '平均命中',
+    'Mitigated': '減免',
+    'Total': '總計',
+    'Melee': '近戰',
+    'Show All Columns': '顯示所有欄位',
+    'Date': '日期',
+    'Duration': '時長',
+    'Below are the opening rotations from a small sample of recent top': '以下是近期少量頂尖',
+    'Below is the cooldown usage from a small sample of recent top': '以下是近期少量頂尖',
+    'Below is an average breakdown of a small sample of top': '以下是少量頂尖',
+    '. You can use this to compare to your own opener and find potential points of improvement. Note that the opener for some specs may vary based on when certain buffs proc.':
+      '的起手迴圈。你可以拿來和自己的起手比較，找出可改進之處。注意，部分專精的起手會因特定增益觸發的時機而不同。',
+    '. You can use this to help plan your own cooldowns. Note that some cooldown usage may be driven by the needs of the specific tactic or group composition.':
+      '的冷卻技能使用狀況，可以用來規劃自己的冷卻技能。注意，部分冷卻技能的使用時機可能取決於特定戰術或隊伍組成的需求。',
+    '. You can use this to compare to your own cast counts and uptime to find potential points of improvement. Note that the top logs on some encounters may be skewed towards unnecessary padding that you might not want to emulate.':
+      '的平均數據細目。你可以拿來和自己的施放次數與覆蓋率比較，找出可改進之處。注意，部分戰鬥的頂尖紀錄可能偏重不必要的灌數據，未必值得仿效。',
+    'Damage mitigated by abilities, as well as by passive sources like Versatility. These values are':
+      '由技能以及臨機應變等被動來源減免的傷害。這些數值是',
+    'estimates.': '估計值。',
+    'The data on this page was generated using the following sample of recent top rankings that match your selection.':
+      '本頁資料取自以下符合你篩選條件的近期頂尖排名樣本。',
 
     // 其他 UI
     'Last updated': '最後更新',
@@ -537,6 +602,53 @@
     },
   ];
 
+  // ── 迴圈頁的傷害／治療細目 ──────────────────────────────────────────────
+  // 每段說明都被技能 span 切開：「… are <span/>, <span/>, and <span/>. The ability
+  // … is <span/>, at 3.7M per cast.」。帶數字的殘片在這裡，連接詞在
+  // ROTATION_CONNECTIVE_TW。
+  const BREAKDOWN_KIND_TW = Object.freeze({ damage: '傷害', healing: '治療' });
+  const BREAKDOWN_TARGET_TW = Object.freeze({
+    'all targets': '所有目標',
+    'friendly targets': '友方目標',
+    'bosses': '首領',
+    'non-bosses': '非首領目標',
+    'tanks': '坦克',
+    'non-tanks': '非坦克',
+  });
+  const MONTH_NUMBER = Object.freeze({
+    Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6,
+    Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12,
+  });
+
+  PROSE_RULES.push(
+    { re: /^Based on a small sample of top rankings from the last (\d+) days\.$/, tw: m => `統計自過去 ${m[1]} 天內少量頂尖排名的樣本。` },
+    {
+      re: /^This table shows (damage|healing) to (all targets|friendly targets)\. The top (\d+) (damage|healing) abilities are$/,
+      tw: m => `本表顯示對${BREAKDOWN_TARGET_TW[m[2]]}的${BREAKDOWN_KIND_TW[m[1]]}。${BREAKDOWN_KIND_TW[m[4]]}最高的前 ${m[3]} 個技能是`,
+    },
+    {
+      re: /^This table shows damage taken from all enemies and mechanics\. The top (\d+) most damaging mechanics are$/,
+      tw: m => `本表顯示承受自所有敵人與機制的傷害。傷害最高的前 ${m[1]} 個機制是`,
+    },
+    // 首領階段的說明是站方逐場手寫的（「Rav'i feeds at a bone pile …」），不翻；
+    // 只翻接在後面的固定句。
+    {
+      re: /^(.*?)The top (\d+) (damage|healing) abilities are$/,
+      tw: m => `${m[1]}${BREAKDOWN_KIND_TW[m[3]]}最高的前 ${m[2]} 個技能是`,
+    },
+    {
+      re: /^This table shows (damage|healing) to (bosses|non-bosses|tanks|non-tanks)\. On average, ([\d.]+[KMB]?) total (?:damage|healing) was done to (?:bosses|non-bosses|tanks|non-tanks)\.$/,
+      tw: m => m[1] === 'damage'
+        ? `本表顯示對${BREAKDOWN_TARGET_TW[m[2]]}的傷害。平均對${BREAKDOWN_TARGET_TW[m[2]]}造成 ${m[3]} 傷害。`
+        : `本表顯示對${BREAKDOWN_TARGET_TW[m[2]]}的治療。平均對${BREAKDOWN_TARGET_TW[m[2]]}治療 ${m[3]}。`,
+    },
+    { re: /^\. The ability that does the most (damage|healing) per cast is$/, tw: m => `。每次施放${BREAKDOWN_KIND_TW[m[1]]}最高的技能是` },
+    { re: /^, at ([\d.]+[KMB]?) per cast\.$/, tw: m => `，每次施放 ${m[1]}。` },
+    // 「Damage Done to Uncoiled Writhes」：小怪名是站方給的純文字
+    { re: /^Damage Done to (.+)$/, tw: m => `對 ${lookupGameName(m[1]) || m[1]} 造成的傷害` },
+    { re: /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{1,2})$/, tw: m => `${MONTH_NUMBER[m[1]]} 月 ${m[2]} 日` },
+  );
+
   function translateProse(text) {
     for (const rule of PROSE_RULES) {
       const match = text.match(rule.re);
@@ -556,12 +668,32 @@
   });
   const PROSE_CONTEXT_RE = /most popular|usage|tier set in/i;
 
+  // 迴圈頁說明句裡的連接詞。條件同上：只在那幾句裡才翻。整個節點換掉（不保留
+  // 前後空白），「、」後面接空格很難看。上下文要同時認得英文與已翻好的中文，
+  // 因為同一段裡先被翻掉的殘片會改變 textContent。
+  const ROTATION_CONNECTIVE_TW = Object.freeze({
+    ',': '、',
+    ', and': '和',
+    '.': '。',
+    'rankings for': ' 在',
+  });
+  const ROTATION_CONTEXT_RE = /The top \d+|前 \d+ 個|small sample|少量頂尖/;
+  // 「Damage Done to <span>魔導師之觸</span> Targets」
+  const TARGETS_HEADING_RE = /^(Damage Done to|對)\s/;
+
   function translateProseConnective(node) {
     const trimmed = node.textContent.trim();
+    const block = node.parentElement && node.parentElement.closest('p,div,li,h3');
+    if (!block) return null;
+
+    const rotationTw = ROTATION_CONNECTIVE_TW[trimmed];
+    if (rotationTw && ROTATION_CONTEXT_RE.test(block.textContent)) return rotationTw;
+    if (trimmed === 'Targets' && block.tagName === 'H3' && TARGETS_HEADING_RE.test(block.textContent.trim())) {
+      return ' 目標造成的傷害';
+    }
+
     const tw = PROSE_CONNECTIVE_TW[trimmed];
-    if (!tw) return null;
-    const block = node.parentElement && node.parentElement.closest('p,div,li');
-    if (!block || !PROSE_CONTEXT_RE.test(block.textContent)) return null;
+    if (!tw || !PROSE_CONTEXT_RE.test(block.textContent)) return null;
     return node.textContent.replace(trimmed, tw);
   }
 
@@ -681,6 +813,9 @@
   const SKIP_CLASS_KEYWORDS = [
     'item-name', 'ability-name', 'spell-name',
     'wowhead', 'WhTooltip',
+    // 站名 Archon 跟牧師的英雄天賦 Archon（御靈者）同名，頁首 logo 與擋廣告提示
+    // 裡的站名不能交給 lookupUnit
+    'rootBreadcrumb', 'fallback__content',
   ];
 
   function shouldSkipElement(el) {
@@ -701,8 +836,10 @@
           const parent = node.parentElement;
           if (!parent) return NodeFilter.FILTER_REJECT;
           let el = parent;
-          while (el && el !== root) {
+          // root 本身也要檢查：小批同步掃描時 root 可能就是那個 span
+          while (el) {
             if (shouldSkipElement(el)) return NodeFilter.FILTER_REJECT;
+            if (el === root) break;
             el = el.parentElement;
           }
           return NodeFilter.FILTER_ACCEPT;
