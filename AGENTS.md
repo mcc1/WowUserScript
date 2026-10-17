@@ -408,6 +408,20 @@ manager 是**比對 `@version`** 決定要不要重新下載腳本的。只改 `
 > 一句話：**動到 `@require` 那一行，就一定要 bump 該檔的 `@version`。**
 > 要確認使用者端到底在跑哪一版，不要只看管理面板的版本號，請他在頁面 console 驗行為。
 
+### push 完的 5 分鐘：叫使用者按更新之前先說這件事
+
+`raw.githubusercontent.com` 回 `Cache-Control: max-age=300`。使用者如果在 push **之前**
+查過一次更新，那個「沒有新版」的回應就躺在他瀏覽器的 HTTP 快取裡五分鐘 —— 接下來怎麼
+按都一樣，請求根本沒出門。(2026-10-18 就是這樣卡住的，而前幾次之所以「按了馬上有」，
+是因為我 push 完立刻 curl 驗證，順手把 CDN 節點的快取換成了新檔案。)
+
+所以 push 完要嘛請他等五分鐘，要嘛直接給一條繞開快取的安裝連結 —— 裝完之後的更新仍走
+檔案裡宣告的乾淨 `@updateURL`：
+
+```
+https://raw.githubusercontent.com/mcc1/WowUserScript/master/<script>.user.js?nocache=1
+```
+
 改單一站台腳本時只 bump 該檔的 `@version`（版本已刻意 decouple，見 commit `2b76205`）。
 
 `@require` / `@updateURL` / `@downloadURL` 全部指向
