@@ -39,9 +39,38 @@
 | 物品／法術／附魔／通貨 | 頁面上的 Wowhead 連結 | Wowhead widget（`data-wh-rename-link="true"`） | **執行期自動**，無字典 |
 | 副本／團本／首領 | DB2 `JournalInstance` / `JournalEncounter` | wago.tools `?locale=zhTW` | **產生器**，見下 |
 | 種族／職業／專精／英雄天賦 | DB2 `ChrRaces` / `ChrClasses` / `ChrSpecialization` / `TraitSubTree` | 同上 | **產生器** |
+| 鑲飾效果／系統名／屬性名（站方原樣印出、頁面上沒有 ID） | 產生器裡逐列登記 BaseTag／ID | 同上 | **產生器**，見〈逐列登記〉 |
 | 站台自己的 UI 字串 | 無 ID | 只有這類才手寫 | 各腳本的 `EXACT_TW` 等 |
 
 **絕對不要**為了翻譯一個副本、首領、種族或專精而新增字典項目。改跑產生器。
+
+### 逐列登記（`LABEL_TABLES`）— 沒有 ID 可查的遊戲字串
+
+有些遊戲字串站方是直接印成純文字的，頁面上找不到任何 ID：raidbots 會在品名下面
+印鑲飾效果名（`Venomcursed Mastery`），Top Gear 的面板標題是 Midnight 的系統名
+（`Omnium Folio`）。這類字串既不是站台自創的 UI 文字，也沒有連結可以讓 Wowhead
+widget 改名。
+
+解法不是手寫譯名，是**在產生器裡登記「哪一列」**：
+
+```js
+// tools/generate-game-names.mjs
+const LABEL_TABLES = [
+  { db2: 'GlobalStrings', column: 'TagText_lang', key: 'BaseTag',
+    values: ['MIDNIGHT_LANDING_PAGE_TITLE', 'ITEM_MOD_CR_AVOIDANCE_SHORT', ...] },
+  { db2: 'SpellName', column: 'Name_lang', key: 'ID',
+    values: ['1307922' /* Venomcursed Mastery */, ...] },
+];
+```
+
+登記的是 BaseTag 或 ID，中文一樣由 client 資料提供，改版重跑就會跟著更新。
+整張表帶不動（SpellName 上百萬列），所以 wago.tools 的 CSV 端點用 `filter` 一列
+一個請求：`/db2/SpellName/csv?locale=zhTW&filter[ID]=1307922`。
+**`filter` 是模糊比對**（`ITEM_MOD_VERSATILITY` 也會掃到 `..._SHORT`），所以產生器
+會自己挑出完全相等的那一列。
+
+查新字串的 ID：wago.tools 的 DB2 瀏覽器可以反查，例如用英文名在 `SpellName`
+的 `Name_lang` 上過濾。產出掛在 `window.WowGameNamesTw.lookupLabel(en)`。
 
 ### 重跑產生器（每次遊戲改版）
 
@@ -314,6 +343,7 @@ DOM 時沒問題，但站方一旦沒更新，被動模式會產生**比原生�
 |---|---|
 | `lookup(en)` | 副本／團本／首領 → 官方繁中，查不到回 `null` |
 | `lookupUnit(en)` | 種族／職業／專精／英雄天賦 → 官方繁中 |
+| `lookupLabel(en)` | 逐列登記的字串（鑲飾效果／系統名／屬性名）→ 官方繁中。**完全比對**，不推導別名 |
 | `UNIT_LISTS` | 各分類的官方**英文**名清單，供前綴比對／CSS class 偵測 |
 
 `UNIT_LISTS` 的用途：archon 要把「Frost Mage」拆成專精 + 職業，
@@ -416,16 +446,35 @@ node tools/generate-game-names.mjs --self-test   # 產生器模板
 2. 新增任何疊在圖示上的短標籤時，要一併加進 `registerNonItemNames`。
    函式庫本身已擋掉「5 字元以內的全大寫字串」（真正的裝備名一定含小寫字母）。
 
-## raidbots Top Gear 比較列的 `Avoid2` 不是裝備名
+## raidbots Top Gear 比較列的 `Avoid2`：不是裝備名，而且只有兩個字的額度
 
-比較列每個圖示下面那行小字 (`Avoid2`、`CritPct2`、`Pri2`) 是**附魔簡碼 + 階級**:
-站方 JS 裡每條附魔都有 `shortName`, `CritPct` 對應的是 Eyes of the Eagle。新改版會
-長出新的簡碼, 數字也會變, 所以這是**列不完的**, 不要想用字典蓋過去 -- 函式庫擋的是
-形狀: 單一個詞尾端接數字 (`/^[A-Za-z]+\d+$/`) 不會是裝備名。
+比較列每個圖示下面那行小字 (`Avoid2`、`CritPct2`、`Pri2`) 是**附魔／寶石簡碼**:
+站方 JS 裡每條附魔與寶石都有 `shortName` (那條附魔加的屬性), 後面接同部位的第幾個
+選項。`CritPct` 對應的是 Eyes of the Eagle、`Avoid` 是 Rune of Avoidance 那一族。
 
-這些簡碼原本會被純文字改名探針整欄改成那一列主裝備的名字, 蓋在圖示上 (使用者回報
-「報告頁面怪怪的」, 2026-10-17)。維持英文是刻意的: 譯成中文會變長, 擠爆 28px 的格子,
-而且站方沒有對應的官方字串可查。
+兩件事:
+
+1. **它不是裝備名。** 這些簡碼原本會被純文字改名探針整欄改成那一列主裝備的名字,
+   蓋在圖示上 (使用者回報「報告頁面怪怪的」, 2026-10-17)。簡碼是列不完的 (改版會長
+   出新的, 尾數也會變), 所以函式庫擋的是**形狀**: 單一個詞尾端接數字
+   (`/^[A-Za-z]+\d+$/`) 不會是裝備名。沒有尾數的 `Pri`、`Avoid` 則靠腳本把
+   `ENCHANT_SHORT_TW` 的 key 登記進 `registerNonItemNames`。
+
+2. **譯文最多兩個字。** 那個格子寬 28px、字級 10px、`white-space: normal`, 標籤又是
+   絕對定位的 —— 中文第三個字就換行, 直接壓到下一列。實測: `Pri2` 高 10px、
+   `主屬2` 高 10px、`主屬性2` 高 20px。所以 `ENCHANT_SHORT_TW` 一律用兩個字
+   (`主屬`、`致命`、`臨機`), 複合簡碼 (`Pri/Armor`、`C/H` 這種雙屬性寶石) **不翻**,
+   英文斜線寫法塞得進去, 中文塞不進去。
+
+   `CritPct` 與 `Crit` 併成同一個「致命」: 兩個字標不下這個分別, 而尾數本來就是同一
+   族的第幾個選項, 同一個部位不會重複。
+
+   查不到的簡碼 (`Hashey`、`Apoc` 這種拿附魔名縮寫的) 整串保留英文。自己編一套中文
+   縮寫就是另一本會漂移的手寫字典, 寧可不翻。
+
+屬性短名 (致命／加速／精通／臨機) 是官方「致命一擊／加速／精通／臨機應變」的縮寫,
+全名在 `game-names-tw.js` 的 `LABELS` 裡 (GlobalStrings 的 `ITEM_MOD_*` 標籤), 要查
+出處看那裡, 不要憑印象改。
 
 ## bloodmallet 的陷阱（踩過一次，別再踩）
 
@@ -502,6 +551,13 @@ Wowhead widget 只碰文字節點。
   重跑產生器, 不是加字典。
 - bloodmallet 已於瀏覽器實地驗證（2026-08-29，v0.8.0）：語言表註冊、bar tooltip
   回填、`/index.html` 首頁翻譯三項都確認生效。
+- 鑲飾效果只登記了 Midnight 的 Venomcursed 四條 (`LABEL_TABLES`)。使用者裝到別的
+  鑲飾就會看到英文 —— 那時補登記 SpellName ID 即可。真正一勞永逸的做法是比對
+  Wowhead 同一件物品的 enUS / zhTW tooltip (`nether.wowhead.com/tooltip/item/<id>`
+  兩個 locale 逐行對位), 整類鑲飾都不用登記, 但那是另一套機制。
+- 警告句裡的消耗品名 (`Potion of Recklessness`) 還是英文: 那句話是純文字, 沒有連結
+  也沒有 ID。同上, 要嘛登記 ItemSparse ID, 要嘛等 tooltip 對位機制。
+- `SimC 通知` 面板是模擬引擎輸出 (procs 假設之類), 不是站台 UI, 沒有翻。
 
 ## 慣例
 

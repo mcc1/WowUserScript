@@ -43,6 +43,48 @@ const UNIT_TABLES = [
   { db2: 'TraitSubTree', column: 'Name_lang', group: 'heroTalents' },
 ];
 
+// LABELS 表：站台會直接把遊戲字串印在畫面上，但頁面上沒有 ID 可查的那些 ——
+// 鑲飾效果名、系統名、屬性名。整張表太大不可能全帶（SpellName 上百萬列），
+// 所以這裡「逐列登記」。登記的是哪一列（BaseTag 或 ID），不是譯名：中文照樣
+// 從 client 資料取，手上永遠不碰。改版後重跑就會跟著更新。
+const LABEL_TABLES = [
+  {
+    db2: 'GlobalStrings',
+    column: 'TagText_lang',
+    key: 'BaseTag',
+    values: [
+      // raidbots Top Gear 的面板標題（Midnight 的符文系統）
+      'MIDNIGHT_LANDING_PAGE_TITLE',
+      // 附魔／寶石簡碼指的屬性（Avoid2、CritPct2 這種標在圖示下面的字）
+      'SPEC_FRAME_PRIMARY_STAT',
+      'ITEM_MOD_STRENGTH_SHORT',
+      'ITEM_MOD_AGILITY_SHORT',
+      'ITEM_MOD_INTELLECT_SHORT',
+      'ITEM_MOD_STAMINA_SHORT',
+      'ITEM_MOD_CRIT_RATING_SHORT',
+      'ITEM_MOD_HASTE_RATING_SHORT',
+      'ITEM_MOD_MASTERY_RATING_SHORT',
+      'ITEM_MOD_VERSATILITY',
+      'ITEM_MOD_CR_AVOIDANCE_SHORT',
+      'ITEM_MOD_CR_LIFESTEAL_SHORT',
+      'ITEM_MOD_CR_SPEED_SHORT',
+    ],
+  },
+  {
+    db2: 'SpellName',
+    column: 'Name_lang',
+    key: 'ID',
+    values: [
+      // Midnight 打造裝備的鑲飾效果：raidbots 把效果名直接印在品名下面，
+      // 那段文字沒有連結也沒有 ID，只能靠這裡登記。
+      '1307906', // Venomcursed Critical Strike
+      '1307922', // Venomcursed Mastery
+      '1307927', // Venomcursed Haste
+      '1317581', // Venomcursed Ascendance
+    ],
+  },
+];
+
 // TraitSubTree 混有未上線的測試列，一律略過。
 const SKIP_NAME = /\[DNT\]|UI Test/i;
 
@@ -103,8 +145,11 @@ function parseCsv(text) {
   });
 }
 
-async function fetchCsv(db2, locale) {
-  const url = WAGO_CSV + db2 + '/csv?locale=' + locale;
+async function fetchCsv(db2, locale, filter) {
+  let url = WAGO_CSV + db2 + '/csv?locale=' + locale;
+  if (filter) {
+    url += '&filter[' + encodeURIComponent(filter.key) + ']=' + encodeURIComponent(filter.value);
+  }
   for (let attempt = 0; attempt < 4; attempt += 1) {
     try {
       const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT, Accept: 'text/csv' } });
@@ -140,6 +185,51 @@ async function fetchPairs(db2, column) {
     }
   }
   console.log('  ' + db2 + ': ' + pairs.length + ' / ' + en.length + ' rows translated');
+  return pairs;
+}
+
+/**
+ * GlobalStrings 的字串常帶格式參數（`Primary Stat: %s` / `主要屬性：%s`），
+ * 當標籤用之前先把尾端的參數與標點去掉。
+ */
+function cleanLabel(value) {
+  return String(value || '')
+    .replace(/[:：]?\s*%[-\d.]*[a-z]\s*$/i, '')
+    .trim();
+}
+
+/**
+ * 逐列登記的遊戲字串：用 BaseTag／ID 把 enUS 與 zhTW 兩版對起來。
+ * 一列一個請求（整張表太大不可能全帶），wago.tools 的 CSV 端點吃 filter。
+ * @returns {Promise<Array<{id: string, en: string, tw: string}>>}
+ */
+async function fetchLabelPairs(spec) {
+  const pairs = [];
+  for (const value of spec.values) {
+    const filter = { key: spec.key, value };
+    const [en, tw] = await Promise.all([
+      fetchCsv(spec.db2, 'enUS', filter),
+      fetchCsv(spec.db2, 'zhTW', filter),
+    ]);
+    // filter 是模糊比對（ITEM_MOD_VERSATILITY 也會掃到 ITEM_MOD_VERSATILITY_SHORT
+    // 這種列），所以要自己挑出完全相等的那一列。
+    const enRow = (en || []).find((row) => row[spec.key] === value);
+    const twRow = (tw || []).find((row) => row[spec.key] === value);
+    if (!enRow || !twRow) {
+      console.log('  ' + spec.db2 + ' ' + value + ': not found, skipped');
+      continue;
+    }
+
+    const english = cleanLabel(enRow[spec.column]);
+    const chinese = cleanLabel(twRow[spec.column]);
+    // zhTW 未翻譯時 client 會回填英文，那種條目沒有價值。
+    if (!english || !chinese || english === chinese) {
+      console.log('  ' + spec.db2 + ' ' + value + ': untranslated, skipped');
+      continue;
+    }
+    pairs.push({ id: enRow.ID, en: english, tw: chinese });
+  }
+  console.log('  ' + spec.db2 + ': ' + pairs.length + ' / ' + spec.values.length + ' labels resolved');
   return pairs;
 }
 
@@ -194,11 +284,19 @@ function toRows(table) {
  * 把配對結果組裝成 libs/game-names-tw.js 的內容。
  * 抽成獨立函式，讓 --self-test 能在不連網的情況下驗證模板。
  */
-function renderModule(nameEntries, unitEntries) {
+function renderModule(nameEntries, unitEntries, labelEntries = []) {
   const table = buildTable(nameEntries);
   const unitTable = buildTable(unitEntries);
   const rows = toRows(table);
   const unitRows = toRows(unitTable);
+
+  // 逐列登記的字串按原樣對照，不推導別名：這些是站台原樣印出來的整串文字。
+  const labelTable = new Map();
+  for (const entry of labelEntries) {
+    const key = String(entry.en).toLowerCase().replace(/[^a-z0-9]+/g, '');
+    if (key && !labelTable.has(key)) labelTable.set(key, entry.tw);
+  }
+  const labelRows = toRows(labelTable);
 
   // 各分類的官方英文名清單。呼叫端需要用英文名做前綴比對或 CSS class 偵測
   // （例如 archon 要把「Frost Mage」拆成專精 + 職業），這是英文資料不是翻譯。
@@ -227,6 +325,7 @@ function renderModule(nameEntries, unitEntries) {
     ' * 產生時間：' + new Date().toISOString(),
     ' * NAMES：' + table.size + ' 筆別名（副本／團本／首領，' + nameEntries.length + ' 個實體）',
     ' * UNITS：' + unitTable.size + ' 筆別名（種族／職業／專精，' + unitEntries.length + ' 個實體）',
+    ' * LABELS：' + labelTable.size + ' 筆逐列登記的字串（鑲飾效果／系統名／屬性名）',
     ' */',
     '',
   ].join('\n');
@@ -251,6 +350,11 @@ function renderModule(nameEntries, unitEntries) {
       '  // 種族／職業／專精／英雄天賦樹',
       '  const UNITS = Object.freeze({',
       ...unitRows,
+      '  });',
+      '',
+      '  // 站台直接印在畫面上的遊戲字串（鑲飾效果／系統名／屬性名）',
+      '  const LABELS = Object.freeze({',
+      ...labelRows,
       '  });',
       '',
       '  // 各分類的官方英文名（供呼叫端做前綴比對／識別用）',
@@ -301,12 +405,23 @@ function renderModule(nameEntries, unitEntries) {
       '    return get(UNITS, englishName);',
       '  }',
       '',
+      '  /**',
+      '   * 站台直接印出的遊戲字串（鑲飾效果／系統名／屬性名）的官方繁中',
+      '   * @param {string} englishName',
+      '   * @returns {string|null}',
+      '   */',
+      '  function lookupLabel(englishName) {',
+      '    return get(LABELS, englishName);',
+      '  }',
+      '',
       '  return {',
       '    NAMES: NAMES,',
       '    UNITS: UNITS,',
+      '    LABELS: LABELS,',
       '    UNIT_LISTS: UNIT_LISTS,',
       '    lookup: lookup,',
       '    lookupUnit: lookupUnit,',
+      '    lookupLabel: lookupLabel,',
       '    normalize: normalize,',
       '  };',
       '});',
@@ -325,6 +440,11 @@ function selfTest() {
     [
       { id: '1', en: 'Dracthyr', tw: '龍希爾' },
       { id: '2', en: 'Beast Mastery', tw: '野獸控制' },
+    ],
+    [
+      { id: '1307922', en: 'Venomcursed Mastery', tw: '咒毒精通' },
+      { id: '58702', en: 'Omnium Folio', tw: '萬象儀對開本' },
+      { id: '24406', en: 'Avoidance', tw: '迴避' },
     ]
   );
 
@@ -341,6 +461,11 @@ function selfTest() {
     ['unit race', api.lookupUnit('dracthyr'), '龍希爾'],
     ['unit spec snake_case', api.lookupUnit('beast_mastery'), '野獸控制'],
     ['units kept out of NAMES', api.lookup('Dracthyr'), null],
+    ['label embellishment', api.lookupLabel('Venomcursed Mastery'), '咒毒精通'],
+    ['label stat', api.lookupLabel('Avoidance'), '迴避'],
+    ['label miss', api.lookupLabel('Rune of Avoidance'), null],
+    ['labels kept out of NAMES', api.lookup('Omnium Folio'), null],
+    ['format placeholder stripped', cleanLabel('主要屬性：%s'), '主要屬性'],
   ];
 
   let failed = 0;
@@ -373,10 +498,16 @@ async function main() {
   const nameEntries = await collect(NAME_TABLES);
   const unitEntries = await collect(UNIT_TABLES);
 
+  const labelEntries = [];
+  for (const spec of LABEL_TABLES) {
+    labelEntries.push(...(await fetchLabelPairs(spec)));
+  }
+
   if (nameEntries.length === 0) die('no journal names resolved — refusing to write an empty table');
   if (unitEntries.length === 0) die('no race/class/spec names resolved — refusing to write an empty table');
+  if (labelEntries.length === 0) die('no registered labels resolved — refusing to write an empty table');
 
-  const body = renderModule(nameEntries, unitEntries);
+  const body = renderModule(nameEntries, unitEntries, labelEntries);
   await fs.writeFile(OUT_FILE, body, 'utf8');
   console.log('wrote ' + path.relative(ROOT, OUT_FILE) + ' (' + body.length + ' bytes)');
 }

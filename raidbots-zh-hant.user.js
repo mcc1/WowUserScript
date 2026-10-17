@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.9.1
+// @version      1.9.2
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
 // @match        https://raidbots.com/*
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.10.1
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=3
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=4
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/raidbots-zh-hant.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/raidbots-zh-hant.user.js
 // @run-at       document-start
@@ -278,6 +278,25 @@
     'Shopping List': '購物清單',
     'Total upgrade cost:': '總升級花費：',
     'More Details': '更多細節',
+    // 結果表上方那句被連結切成兩段。sidegrade 是站台自創術語（換了也差不多的
+    // 裝備），暴雪沒有對應字串 —— 沿用本檔既有的「同等結果」說法。
+    'Highlighted rows are': '標示的列是',
+    sidegrades: '同等結果的替換',
+    // 圖示按鈕的 title／aria-label（2026-10-18 掃描）
+    'Average Item Level': '平均物品等級',
+    'More Options': '更多選項',
+    'Editor options': '編輯器選項',
+    'Run Sim Again options': '重新執行模擬的選項',
+    Fullscreen: '全螢幕',
+    Close: '關閉',
+    'Stat Weights': '屬性權重',
+    'Run in Top Gear': '用最佳配裝執行',
+    'Run in Droptimizer': '用掉落最佳化執行',
+    'Run in Quick Sim': '用快速模擬執行',
+    'Run in Stat Weights': '用屬性權重執行',
+    'Copy the SimC input for this character': '複製這個角色的 SimC 輸入',
+    'Enchants and gems to buy, as an Auctionator shopping list': '需要購買的附魔與寶石（Auctionator 購物清單格式）',
+    'More info about Top Gear and sidegrades': '關於最佳配裝與同等結果替換的說明',
     // 副屬性警告句被物品連結切成好幾段，逐段翻
     'You have': '你的',
     'with a large secondary stat proc and': '有大量副屬性觸發效果，而本次模擬中有',
@@ -307,7 +326,7 @@
     'Processing Time': '處理時間',
     'SimC Version': 'SimC 版本',
     'SimC Build Date': 'SimC 建置時間',
-    'SimC Git Hash': 'SimC Git Hash',
+    'SimC Git Hash': 'SimC Git 雜湊',
     'Raw Files': '原始檔案',
     'Report disabled for large simulation': '大型模擬已停用報表',
     'Share Report URL': '分享報表連結',
@@ -664,6 +683,40 @@
     TGS: '配裝',   // Top Gear Search
   });
 
+  // 比較列的圖示下面標的是附魔／寶石簡碼：站方 JS 的 shortName（那條附魔或寶石
+  // 加的屬性）接上同部位的第幾個選項 —— Avoid2、CritPct2、Pri2。
+  // 對應到本檔既有的屬性短名：致命／加速／精通／臨機 是官方「致命一擊／加速／
+  // 精通／臨機應變」的縮寫（全名在 game-names-tw.js 的 LABELS，取自 GlobalStrings
+  // 的 ITEM_MOD_* 標籤），其餘本來就是官方全名。
+  //
+  // **一律兩個字**：那個格子寬 28px、字級 10px，`white-space: normal`，中文第三個
+  // 字就換行，絕對定位的標籤會往下壓到下一列（實測「主屬性2」高 20px、「主屬2」
+  // 高 10px，英文 Pri2 也是 10px）。所以寧可縮也不要照官方全名貼。
+  //
+  // 查不到的簡碼（Hashey、Apoc 這種拿附魔名縮寫的）整串保留英文 —— 自己編一套
+  // 中文縮寫只會變成另一本會漂移的手寫字典。
+  const ENCHANT_SHORT_TW = Object.freeze({
+    Pri: '主屬',
+    Str: '力量',
+    Agi: '敏捷',
+    Int: '智力',
+    Sta: '耐力',
+    Stam: '耐力',
+    Crit: '致命',
+    Haste: '加速',
+    Mast: '精通',
+    Vers: '臨機',
+    Avoid: '迴避',
+    Leech: '汲取',
+    Speed: '速度',
+    Armor: '護甲',
+    Mana: '法力',
+    C: '致命',
+    H: '加速',
+    M: '精通',
+    V: '臨機',
+  });
+
   const EXACT_TW_CI = Object.freeze(
     Object.fromEntries(
       Object.entries(EXACT_TW).map(([key, value]) => [key.toLowerCase(), value])
@@ -722,6 +775,17 @@
     if (!table || typeof table.lookup !== 'function' || !value) return null;
     try {
       return table.lookup(value);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /** 站台直接印出的遊戲字串（鑲飾效果／系統名／屬性名），逐列登記在產生器裡 */
+  function lookupGameLabel(value) {
+    const table = gameNames();
+    if (!table || typeof table.lookupLabel !== 'function' || !value) return null;
+    try {
+      return table.lookupLabel(value);
     } catch (_) {
       return null;
     }
@@ -877,6 +941,26 @@
     return dateStr;
   }
 
+  /**
+   * 附魔／寶石簡碼 -> 中文。整串都查得到才翻，否則保留英文。
+   * @param {string} raw 例如 Avoid2、CritPct2、Pri/Armor
+   * @returns {string|null}
+   */
+  function translateEnchantShortCode(raw) {
+    // 複合簡碼（Pri/Armor、C/H 這種雙屬性寶石）不翻：英文斜線寫法塞得進 28px，
+    // 中文版「主屬/護甲」一定換行，壓到下一列比沒翻還難看。
+    const match = String(raw || '').trim().match(/^([A-Za-z]+)(\d*)$/);
+    if (!match) return null;
+
+    // 站方用 Pct 後綴區分同屬性的另一組附魔（CritPct = Eyes of the Eagle，
+    // Crit = Nature's Fury）。中文只有兩個字的額度，標不下這個分別；尾數本來就
+    // 是同一族的第幾個選項，同一個部位不會重複，所以併成同一個詞。
+    const base = match[1].length > 3 && /Pct$/.test(match[1]) ? match[1].slice(0, -3) : match[1];
+    const tw = ENCHANT_SHORT_TW[base];
+    if (!tw) return null;
+    return tw + match[2];
+  }
+
   function translateStatLabel(label) {
     const key = String(label || '').trim().toLowerCase();
     return STAT_LABEL_TW[key] || null;
@@ -902,6 +986,28 @@
     const exactCaseInsensitive = EXACT_TW_CI[trimmed.toLowerCase()];
     if (exactCaseInsensitive) {
       return replaceTrimmed(text, trimmed, exactCaseInsensitive);
+    }
+
+    // 站方直接印出的遊戲字串（鑲飾效果名、Midnight 的系統名）。頁面上沒有 ID
+    // 可查，所以在產生器裡逐列登記 BaseTag／SpellName ID，譯名一樣來自 client
+    // 資料，不手寫。查不到就保留英文。
+    const gameLabel = lookupGameLabel(trimmed);
+    if (gameLabel) {
+      return replaceTrimmed(text, trimmed, gameLabel);
+    }
+
+    // 報表資訊面板的執行時間：Oct 15, 12:15 am
+    const timestampMatch = trimmed.match(/^([A-Za-z]{3,9})\s+(\d{1,2}),\s*(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+    if (timestampMatch) {
+      const month = MONTH_TW[timestampMatch[1].toLowerCase().slice(0, 3)];
+      if (month) {
+        const meridiem = timestampMatch[5].toLowerCase() === 'am' ? '上午' : '下午';
+        return replaceTrimmed(
+          text,
+          trimmed,
+          `${month} 月 ${timestampMatch[2]} 日 ${meridiem} ${timestampMatch[3]}:${timestampMatch[4]}`
+        );
+      }
     }
 
     const hotfixMatch = trimmed.match(/^Raidbots is up-to-date with the latest (.+) hotfixes$/i);
@@ -1267,6 +1373,37 @@
     }
   }
 
+  const COMPARE_ROW_SELECTOR = '[data-test="actor-compare-row"]';
+
+  // 簡碼只在比較列裡翻：C、V、M 這種單字母在頁面別處可能是完全不同的東西，
+  // 放進 translateText 會波及整站。
+  function translateEnchantShortCodes(root) {
+    const scope = root instanceof Document ? root.body : root;
+    if (!(scope instanceof Element)) {
+      return;
+    }
+
+    const rows = new Set();
+    if (typeof scope.matches === 'function' && scope.matches(COMPARE_ROW_SELECTOR)) rows.add(scope);
+    if (typeof scope.closest === 'function') {
+      const owner = scope.closest(COMPARE_ROW_SELECTOR);
+      if (owner) rows.add(owner);
+    }
+    for (const row of scope.querySelectorAll(COMPARE_ROW_SELECTOR)) rows.add(row);
+
+    for (const row of rows) {
+      for (const leaf of row.querySelectorAll('p,span,div')) {
+        if (leaf.childElementCount !== 0) continue;
+        const original = (leaf.textContent || '').trim();
+        if (!original) continue;
+        const translated = translateEnchantShortCode(original);
+        if (translated && translated !== original) {
+          leaf.textContent = translated;
+        }
+      }
+    }
+  }
+
   function translateAttribute(element, name) {
     const value = element.getAttribute(name);
     if (!value) {
@@ -1363,6 +1500,7 @@
           translateAttributesInTree(root);
           walkTextNodes(root);
           translateSplitTextElements(root);
+          translateEnchantShortCodes(root);
           translateDocumentTitle();
         },
         onUrlChange: () => {
@@ -1375,6 +1513,9 @@
     whHelper.registerNonItemNames(Object.keys(EXACT_TW));
     // 徽章短碼疊在裝備圖示上，絕不能被 linkify 成物品連結
     whHelper.registerNonItemNames(Object.keys(ITEM_BADGE_TW));
+    // 附魔簡碼同樣疊在圖示上（沒有尾數的 Pri、Avoid 不會被函式庫的「單字接數字」
+    // 規則擋下來），一併登記成非物品名稱
+    whHelper.registerNonItemNames(Object.keys(ENCHANT_SHORT_TW));
     // 字典翻得動的字串都是站台 UI 文字，不是裝備名。純文字改名探針跑在翻譯
     // 之前（flushPendingRoots 的順序），不擋的話「3 variations hidden」這種
     // 帶數字、字典列不完的樣板會先被改寫成該列裝備的名稱，譯文永遠沒機會上。
@@ -1389,6 +1530,7 @@
       translateAttributesInTree(root);
       walkTextNodes(root);
       translateSplitTextElements(root);
+      translateEnchantShortCodes(root);
       translateDocumentTitle();
     };
     const startFallback = () => {

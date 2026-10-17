@@ -7,9 +7,10 @@
  *
  * 改版後請重跑：node tools/generate-game-names.mjs
  *
- * 產生時間：2026-10-17T14:14:44.185Z
+ * 產生時間：2026-10-17T16:33:34.731Z
  * NAMES：3000 筆別名（副本／團本／首領，1375 個實體）
  * UNITS：320 筆別名（種族／職業／專精，210 個實體）
+ * LABELS：17 筆逐列登記的字串（鑲飾效果／系統名／屬性名）
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
@@ -3348,6 +3349,27 @@
     "zandalaritroll": "贊達拉食人妖",
   });
 
+  // 站台直接印在畫面上的遊戲字串（鑲飾效果／系統名／屬性名）
+  const LABELS = Object.freeze({
+    "agility": "敏捷",
+    "avoidance": "迴避",
+    "criticalstrike": "致命一擊",
+    "haste": "加速",
+    "intellect": "智力",
+    "leech": "汲取",
+    "mastery": "精通",
+    "omniumfolio": "萬象儀對開本",
+    "primarystat": "主要屬性",
+    "speed": "速度",
+    "stamina": "耐力",
+    "strength": "力量",
+    "venomcursedascendance": "咒毒晉升",
+    "venomcursedcriticalstrike": "咒毒致命一擊",
+    "venomcursedhaste": "咒毒加速",
+    "venomcursedmastery": "咒毒精通",
+    "versatility": "臨機應變",
+  });
+
   // 各分類的官方英文名（供呼叫端做前綴比對／識別用）
   const UNIT_LISTS = Object.freeze({
     classes: Object.freeze(["Adventurer", "Death Knight", "Demon Hunter", "Druid", "Evoker", "Hunter", "Mage", "Monk", "Paladin", "Priest", "Rogue", "Shaman", "Traveler", "Warlock", "Warrior"]),
@@ -3399,12 +3421,23 @@
     return get(UNITS, englishName);
   }
 
+  /**
+   * 站台直接印出的遊戲字串（鑲飾效果／系統名／屬性名）的官方繁中
+   * @param {string} englishName
+   * @returns {string|null}
+   */
+  function lookupLabel(englishName) {
+    return get(LABELS, englishName);
+  }
+
   return {
     NAMES: NAMES,
     UNITS: UNITS,
+    LABELS: LABELS,
     UNIT_LISTS: UNIT_LISTS,
     lookup: lookup,
     lookupUnit: lookupUnit,
+    lookupLabel: lookupLabel,
     normalize: normalize,
   };
 });
