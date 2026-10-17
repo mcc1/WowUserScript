@@ -43,6 +43,8 @@ import urllib.request
 import zlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# 瀏覽器那邊斷線的各種長相（Windows 的 10053/10054 是 ConnectionAborted/Reset）。
+DISCONNECTED = (ConnectionResetError, ConnectionAbortedError, BrokenPipeError)
 HOP = {
     'content-encoding', 'transfer-encoding', 'content-length', 'connection',
     'content-security-policy', 'content-security-policy-report-only',
@@ -97,6 +99,14 @@ def make_handler(upstream, inject_files):
             self.forward()
 
         def forward(self):
+            try:
+                self.proxy_request()
+            except DISCONNECTED:
+                # 瀏覽器換頁／取消請求時會直接斷掉連線。這不是錯誤，但預設會印出
+                # 二十行 traceback，真正的錯誤就埋在裡面了。
+                pass
+
+        def proxy_request(self):
             if self.path.startswith('/__local/'):
                 self.serve_local()
                 return
@@ -123,6 +133,10 @@ def make_handler(upstream, inject_files):
                 status, headers, body = response.status, response.headers, response.read()
             except urllib.error.HTTPError as error:
                 status, headers, body = error.code, error.headers, error.read()
+            except (urllib.error.URLError, TimeoutError, OSError) as error:
+                # 上游連不上時回一個看得懂的 502，不要讓 proxy 噴 traceback。
+                self.send_error(502, 'upstream request failed: %s' % error)
+                return
 
             encoding = (headers.get('Content-Encoding') or '').lower()
             if encoding == 'gzip':
@@ -154,6 +168,14 @@ def make_handler(upstream, inject_files):
 class Server(socketserver.ThreadingTCPServer):
     allow_reuse_address = True
     daemon_threads = True
+
+    def handle_error(self, request, client_address):
+        # 連線被對面關掉是常態（換頁、取消請求、分頁關閉），不是這支程式的錯誤。
+        # 預設行為會把整段 traceback 印到 stderr，一次換頁就是好幾十行，真正的
+        # 錯誤反而看不到 —— 2026-10-17 就因為這堆噪音誤判成 proxy 自己掛了。
+        if isinstance(sys.exc_info()[1], DISCONNECTED):
+            return
+        super().handle_error(request, client_address)
 
 
 def main():
