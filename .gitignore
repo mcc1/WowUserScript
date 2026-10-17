@@ -1,0 +1,3 @@
+# 本機驗證用的預覽設定（tools/inject-proxy.py 註冊給內建瀏覽器的 launch.json）。
+# 每台機器的 port 與站台組合不同，不進版控。
+.claude/
