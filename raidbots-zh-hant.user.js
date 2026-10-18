@@ -6,7 +6,7 @@
 // @author       mcc
 // @match        https://www.raidbots.com/*
 // @match        https://raidbots.com/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.10.2
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.10.3
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=5
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/raidbots-zh-hant.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/raidbots-zh-hant.user.js
@@ -302,7 +302,9 @@
     'You have': '你的',
     'with a large secondary stat proc and': '有大量副屬性觸發效果，而本次模擬中有',
     'in this sim change your highest secondary stat (marked with a warning icon below) - this can cause surprising sim results!':
-      '改變了你最高的副屬性（下方以警告圖示標記）- 這可能導致意外的模擬結果！',
+      '改變了你最高的副屬性（下方以警告圖示標記），這可能導致意外的模擬結果！',
+    // 比較列的警告圖示 tooltip，後面接「Mastery → Haste」兩個屬性節點
+    'Different highest secondary stat than equipped:': '最高副屬性與目前裝備不同：',
     Best: '最佳',
     'Show All Variations': '顯示所有變體',
     'Go to equipped': '跳到目前裝備',
@@ -450,7 +452,6 @@
     'gem combinations can take a very long time!': '寶石組合可能需要很長時間！',
     'Current selection results in only 1 valid combination. Check items for warnings, select more options, and/or check gem settings.': '目前選擇僅產生 1 個有效組合。請檢查物品警告、增加選項，或調整寶石設定。',
     'By default, SimC varies fight length for each iteration to avoid overly specific results.': '預設情況下，SimC 會在每次迭代調整戰鬥長度，避免結果過度侷限。',
-    'In this sim, fight length varies from 240 to 360 seconds.': '此模擬中，戰鬥長度會在 240 到 360 秒之間變動。',
     'Top Gear will not change your prismatic gems': 'Top Gear 不會變更你的多色寶石',
     'Top Gear will use the global food setting': 'Top Gear 將使用全域食物設定',
     'Top Gear will use the global flask setting': 'Top Gear 將使用全域精煉藥劑設定',
@@ -762,7 +763,10 @@
   });
 
   const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'CODE', 'PRE']);
-  const SKIP_CLASS_KEYWORDS = ['ace_', 'CodeMirror', 'monaco-editor'];
+  // CodeMirror 6 的 class 是 cm-*，不是 CodeMirror 5 的 CodeMirror。唯讀模式下
+  // isContentEditable 是 false 擋不到；不跳過的話 CM6 會把每個被翻掉的字寫回
+  // 原文，observer 再翻一次 —— 報告頁「原始插件輸入」展開後每秒 75 次變動。
+  const SKIP_CLASS_KEYWORDS = ['ace_', 'CodeMirror', 'cm-editor', 'monaco-editor'];
   const ATTRIBUTE_SELECTOR = '[aria-label],[title],[placeholder],input[type="button"][value],input[type="submit"][value],input[type="reset"][value]';
   const ATTRIBUTE_NAMES = ['aria-label', 'title', 'placeholder'];
   const MAX_TERM_WORDS = 5;
@@ -895,6 +899,10 @@
     return null;
   }
 
+  const JOIN_AFTER_NUMBER = new Set([
+    'in this sim change your highest secondary stat (marked with a warning icon below) - this can cause surprising sim results!',
+  ]);
+
   function replaceTrimmed(original, trimmed, translated) {
     return original.replace(trimmed, translated);
   }
@@ -1010,6 +1018,8 @@
 
     const exact = EXACT_TW[trimmed];
     if (exact) {
+      // 前一個節點是數字（「15」），原文靠開頭的空格隔開；中文接在數字後面不要空格
+      if (JOIN_AFTER_NUMBER.has(trimmed)) return exact;
       return replaceTrimmed(text, trimmed, exact);
     }
 
@@ -1232,6 +1242,11 @@
     }
 
     // 「Max」常先被逐節點翻成「最大」，合併節點後才看到後半句，兩種寫法都要認
+    const fightLengthMatch = trimmed.match(/^In this sim, fight length varies from (\d+) to (\d+) seconds\.$/i);
+    if (fightLengthMatch) {
+      return replaceTrimmed(text, trimmed, `此模擬中，戰鬥長度會在 ${fightLengthMatch[1]} 到 ${fightLengthMatch[2]} 秒之間變動。`);
+    }
+
     const maxSelectionMatch = trimmed.match(/^(?:Max|最大)\s+(\d+)\s+selections?$/i);
     if (maxSelectionMatch) {
       return replaceTrimmed(text, trimmed, `最多選擇 ${maxSelectionMatch[1]} 項`);
@@ -1320,6 +1335,14 @@
       return;
     }
 
+    // 下面的 acceptNode 只往上查到 root 為止。編輯器自己重繪時，批次的 root 是
+    // 編輯器裡的一行，外層的 .cm-editor 在 root 之上 —— root 的祖先也要查。
+    for (let el = rootNode.nodeType === 1 ? rootNode : rootNode.parentElement; el; el = el.parentElement) {
+      if (shouldSkipElement(el)) {
+        return;
+      }
+    }
+
     const walker = document.createTreeWalker(
       rootNode,
       NodeFilter.SHOW_TEXT,
@@ -1371,7 +1394,8 @@
   // 一段相鄰的文字節點裡，找出合起來翻得動的那幾個。
   // 譯文寫回該段的第一個節點、其餘清空 —— 節點數量不變，React 之後要更新也
   // 還找得到自己的節點（刪節點會讓它找不到而炸掉）。
-  const MAX_JOINED_TEXT_NODES = 4;
+  // 「In this sim, fight length varies from 」「240」「 to 」「360」「 seconds.」是 5 個
+  const MAX_JOINED_TEXT_NODES = 5;
 
   function translateTextNodeRun(nodes) {
     for (let size = Math.min(MAX_JOINED_TEXT_NODES, nodes.length); size >= 2; size -= 1) {

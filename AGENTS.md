@@ -164,6 +164,15 @@ archon 是**換掉節點**，不是改文字。查這類問題時 `childList`、
 `attributes` 三種要一起收，而且要記 `characterDataOldValue`，否則分不出哪一筆是
 站方寫的、哪一筆是自己寫的。
 
+#### 跳過規則要查到 root 的祖先, 不是只查到 root
+
+`walkTextNodes` 的 `acceptNode` 從文字節點往上檢查 `shouldSkipElement`, 到批次的
+root 就停。編輯器自己重繪時, 那一批的 root 是編輯器**裡面**的一行, 外層的
+`.cm-editor` 在 root 之上 —— 跳過規則永遠看不到它。raidbots 報告頁展開「原始插件
+輸入」後, 我們把 `hunter` 翻成獵人、CodeMirror 6 立刻寫回 `hunter`、observer 再翻,
+每秒 75 次 (2026-10-18)。另外 CM6 的 class 是 `cm-*`, 不是 CM5 的 `CodeMirror`, 而
+唯讀模式的 `isContentEditable` 是 false, 原本兩道防線都沒擋到。
+
 #### `refreshLinks(true)` 不是免費的：只在動到連結時才叫
 
 widget 的強制重掃會把頁面上**每一條**連結重新改名、重新掛圖示，每條各產生一次
@@ -233,6 +242,14 @@ Wowhead widget 改名的方式是**把整個 `innerHTML` 換成 `<span>名稱</s
 包含上面那種，圖示和數據一起沒。`setupGlobalLocale()` 刻意不設它，raidbots 還明確設成
 `false`。目前只有 bloodmallet 設 true，因為那邊的連結裡只有文字。**測試時不要順手加上
 它**，會得出「探針破壞了圖示」的錯誤結論（實際上是這個旗標幹的）。
+
+#### 附魔的圖示是附魔卷軸, 譯名會多帶一段前綴
+
+raidbots 最佳配裝清單的附魔標籤只印附魔名 (`Empowered Rune of Avoidance`), 旁邊的
+圖示卻是附魔卷軸 (`item=244007`, Wowhead 名稱 `Enchant Helm - Empowered Rune of
+Avoidance`)。探針拿卷軸的 zhTW 名回寫, 畫面就變成「附魔頭盔 - 強化迴避符文」。
+`collectRenameProbes` 在原文沒有 ` - ` 時把 `附魔… - ` 前綴拿掉 (helper v1.10.3)。
+購物清單本來就印全名, 原文帶 ` - `, 不受影響。
 
 #### 一段文字要配哪一個圖示 -- 配錯比沒翻更糟
 
