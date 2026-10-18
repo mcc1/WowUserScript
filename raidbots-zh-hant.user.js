@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.9.5
+// @version      1.9.6
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
@@ -373,6 +373,33 @@
     // 升級軌道的官方名（ItemNameDescription 13284「精兵」），不是「老兵」
     Veteran: '精兵',
     Myth: '神話',
+    // Droptimizer 輸入頁的來源面板（2026-10-18 掃描，Midnight 第 2 季）
+    // Loot Spec 用官方 SELECT_LOOT_SPECIALIZATION「戰利品優先分配專精」
+    'Loot Spec:': '戰利品優先分配專精：',
+    'Loadout and loot spec': '天賦配置與戰利品優先分配專精',
+    'Upgrade Level:': '升級等級：',
+    'Equipped Items': '已裝備物品',
+    'No changes': '不變更',
+    'Preferred Stats:': '偏好屬性：',
+    'You are already wearing this item or a better version': '你已經穿著這件物品或更好的版本',
+    Dungeons: '地城',
+    'All Dungeons': '所有地城',
+    'Dungeon Level': '地城等級',
+    'Requires Raidbots Premium': '需要 Raidbots Premium',
+    // 探究級別用官方 RECENT_ALLY_DELVE_TIER_LABEL「級別%d」
+    'Delve Tier': '探究級別',
+    'Soul Fragments': '靈魂碎片',
+    'Prey Difficulty': '狩獵難度',
+    'Bonus Roll Sources': '好運符來源',
+    'Raid Only': '僅團隊副本',
+    'M+ Only': '僅傳奇鑰石',
+    'Simming all options is only available for Raidbots Premium members.': '模擬所有選項僅限 Raidbots Premium 會員。',
+    'Sign up on your account page': '請到帳號頁面註冊',
+    Profession: '專業',
+    'Ignored options (Raidbots settings control these):': '已忽略的選項（由 Raidbots 設定控制）：',
+    Edited: '已編輯',
+    'Addon input has been edited. Raidbots tools are not guaranteed to work as expected.':
+      '插件輸入已被編輯，Raidbots 工具不保證能正常運作。',
     // Droptimizer 首領欄：小怪掉落的物品。不在字典裡會被探針當成品名改寫
     'Trash Drop': '小怪掉落',
     // Top Gear 說明句被 [+] 按鈕切開：「Use the」[+]「Copy and Modify menu …」
@@ -587,7 +614,8 @@
     'Season 3': '第 3 季',
     'The Coiled Isle': '盤蛇島',
     'Coiled Isle': '盤蛇島',
-    'Curse of Ula\'tek': '烏拉泰克的詛咒',
+    // 詞綴名本身 client 查不到；人名依 SpellName 1288103「烏拉特克的佈道」
+    'Curse of Ula\'tek': '烏拉特克的詛咒',
     'Epic Profession Items': '史詩專業物品',
     'Rare Profession Items': '稀有專業物品',
     'PVP Profession Items': 'PVP 專業物品',
@@ -1076,9 +1104,48 @@
       return replaceTrimmed(text, trimmed, `${profileLinkMatch[1]} 的${siteTw}`);
     }
 
+    // Droptimizer 來源面板的升級軌道與階數：Champion 1/6、Myth 6/6、Hero 1/6
+    const trackTierMatch = trimmed.match(/^(Adventurer|Veteran|Champion|Hero|Myth) (\d+\/\d+)$/);
+    if (trackTierMatch) {
+      return replaceTrimmed(text, trimmed, `${EXACT_TW[trackTierMatch[1]]} ${trackTierMatch[2]}`);
+    }
+
+    // 寶庫層級：傳奇鑰石「M0 Vault」「+2-3 Vault」、探究「Vault 1」「Vault 8+」
+    const keyVaultMatch = trimmed.match(/^(M\d+|\+\d+(?:-\d+)?) Vault$/);
+    if (keyVaultMatch) {
+      return replaceTrimmed(text, trimmed, `${keyVaultMatch[1]} ${EXACT_TW['Great Vault']}`);
+    }
+    const tierVaultMatch = trimmed.match(/^Vault (\d+\+?)$/);
+    if (tierVaultMatch) {
+      return replaceTrimmed(text, trimmed, `${EXACT_TW['Great Vault']} ${tierVaultMatch[1]}`);
+    }
+
+    // 探究級別：「Bountiful 3」是豐碩探究（DELVES_JOURNEY_TIP「豐碩探究」）的級別。
+    // 「Trovehunter 4」是用寶箱獵人的獎賞（ItemSparse 274374）開的探究，沒有獨立的
+    // client 字串，取物品名的前半。
+    const delveTierMatch = trimmed.match(/^(Bountiful|Trovehunter) (\d+\+?)$/);
+    if (delveTierMatch) {
+      const kindTw = delveTierMatch[1] === 'Bountiful' ? '豐碩' : '寶箱獵人';
+      return replaceTrimmed(text, trimmed, `${kindTw} ${delveTierMatch[2]}`);
+    }
+
+    // 好運符來源：「LFR + M0」「Heroic + M10」，下一行是「Raid 292 · M+ 302」。
+    // 那一格寬約 125px，「團隊副本 292 · M+ 302」就會換行，所以縮成「團隊」、M+ 保留原文。
+    const bonusRollSourceMatch = trimmed.match(/^(LFR|Normal|Heroic|Mythic) \+ (M\d+)$/);
+    if (bonusRollSourceMatch) {
+      return replaceTrimmed(text, trimmed, `${DIFFICULTY_TW[bonusRollSourceMatch[1].toLowerCase()]} + ${bonusRollSourceMatch[2]}`);
+    }
+    const bonusRollLevelMatch = trimmed.match(/^Raid (\d+)(?: · M\+ (\d+))?$/);
+    if (bonusRollLevelMatch) {
+      const raidPart = `團隊 ${bonusRollLevelMatch[1]}`;
+      const keyPart = bonusRollLevelMatch[2] ? ` · M+ ${bonusRollLevelMatch[2]}` : '';
+      return replaceTrimmed(text, trimmed, `${raidPart}${keyPart}`);
+    }
+
     // 寶庫徽章 GV* 的 title 是組合字串：Great Vault Item & Upgraded Item & Catalyzed from <物品名>。
     // 每一段都翻得動才換，否則整串保留原文（屬性「10 Crit & 5 Haste」交給下面的規則）。
-    if (trimmed.includes(' & ')) {
+    // CAT 徽章只有「Catalyzed from <物品名>」一段，同一條規則處理。
+    if (trimmed.includes(' & ') || trimmed.startsWith('Catalyzed from ')) {
       const pieces = trimmed.split(' & ').map((piece) => {
         const catalyzedMatch = piece.match(/^Catalyzed from (.+)$/);
         if (catalyzedMatch) {
