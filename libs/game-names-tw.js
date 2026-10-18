@@ -7,10 +7,10 @@
  *
  * 改版後請重跑：node tools/generate-game-names.mjs
  *
- * 產生時間：2026-10-18T10:56:00.285Z
+ * 產生時間：2026-10-18T11:03:50.187Z
  * NAMES：3000 筆別名（副本／團本／首領，1375 個實體）
  * UNITS：320 筆別名（種族／職業／專精，210 個實體）
- * LABELS：41 筆逐列登記的字串（鑲飾效果／系統名／屬性名）
+ * LABELS：43 筆逐列登記的字串（鑲飾效果／系統名／屬性名）
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
@@ -3368,11 +3368,13 @@
     "echoofcalamity": "災禍回音",
     "guileofthemonkeyking": "美猴王之詐",
     "haste": "加速",
+    "heroicsoulfragment": "英雄靈魂碎片",
     "heromistcrest": "英雄迷霧紋章",
     "intellect": "智力",
     "jadewarlordsdominion": "翠玉督軍統御",
     "leech": "汲取",
     "mastery": "精通",
+    "mythicalsoulfragment": "傳奇靈魂碎片",
     "mythmistcrest": "神話迷霧紋章",
     "omniumfolio": "萬象儀對開本",
     "ophidianoraclesprophecy": "爬蛇神諭者預言",

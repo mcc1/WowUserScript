@@ -140,6 +140,10 @@ const LABEL_TABLES = [
     values: [
       // KeystoneLoot 紋章表的來源欄「Trovehunter's Bounty 4–5」
       '252415', // Trovehunter's Bounty
+      // raidbots Droptimizer 來源面板直接印出的物品名
+      '274374', // Trovehunter's Bounty（另一個版本，同名）
+      '285801', // Heroic Soul Fragment
+      '285065', // Mythical Soul Fragment
     ],
   },
   {
