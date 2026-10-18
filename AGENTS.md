@@ -262,7 +262,7 @@ Wowhead widget 改名的方式是**把整個 `innerHTML` 換成 `<span>名稱</s
 `excludedPanelKeywords` (summary / 總覽 / bonus roll / 好運符…) 原本讓探針整塊跳過
 標題含這些字的面板。擋掉的東西是對的 -- 好運符列與 Droptimizer 的首領總覽列, 文字
 是首領或地城名, 右邊掛著那一場的一整排掉落物圖示, 配起來就是「看起來完全合理的
-錯誤資訊」。但同一條排除也擋掉了 Top Gear 的「大秘寶庫 總覽」, 那裡每一列是真的
+錯誤資訊」。但同一條排除也擋掉了 Top Gear 的「寶庫 總覽」, 那裡每一列是真的
 一件裝備, 於是整個頁面只有這一塊停在英文。
 
 `isSingleItemRow()` 把排除從「看面板標題」改成「看列的形狀」, 三條都成立才放行:
@@ -439,6 +439,12 @@ https://raw.githubusercontent.com/mcc1/WowUserScript/master/<script>.user.js?noc
   - Mythic+ = 傳奇鑰石；Raid Finder = 團隊搜尋器。
   - Power Infusion = **注入能量**（`spell=10060`）。不是「能量灌注」—— 官方是
     動詞在前，兩個字順序相反，憑印象填一定錯。
+  - Great Vault = **寶庫**（`DELVES_GREAT_VAULT_LABEL`、`GREAT_VAULT_REWARDS`「寶庫獎勵」）。
+    不是「大秘寶庫」—— 那是社群叫法，client 裡一次都沒出現過。
+  - 升級軌道 Veteran = **精兵**（ItemNameDescription 13284「精兵」，不是「老兵」）；
+    Adventurer = 冒險者、Champion = 勇士、Hero = 英雄、Myth = 神話。
+  - Delves = **探究**（`DELVES_LABEL`）；Prey = **狩獵**（寶庫獎勵說明
+    `GREAT_VAULT_REWARDS_WORLD_*`）；Prismatic socket = **多色插槽**（`EMPTY_SOCKET_PRISMATIC`）。
   - Phial = **藥瓶**（`item=191359` tooltip）；Potion = **藥水**（`item=191387`
     分類）；Enchanting = **附魔**（`spell=7411`）；專業分類作「專業法術」。
 - 暴雪沒有對應字串的少數情況（bloodmallet 的圖表類型就有兩個）：
@@ -471,7 +477,7 @@ node tools/generate-game-names.mjs --self-test   # 產生器模板
 
 - **raidbots**: Droptimizer 輸入頁 / 結果圖表 / Top Gear 卡片 / Vault 區塊 / 語言選單切換 /
   **Top Gear 報告頁**（`/simbot/report/<id>`：最佳配裝清單的品名與附魔、比較列的
-  圖示下標、變體隱藏提示、「大秘寶庫 總覽」每一列的品名）
+  圖示下標、變體隱藏提示、「寶庫 總覽」每一列的品名）
 - **archon**: build 頁的麵包屑、頁籤、天賦 tooltip
 - **bloodmallet**: `/`（spec table）、`/chart/...`（圖表 + Character profile）、`/settings/general`
 - **KeystoneLoot**: `/en/classes`、`/en/classes/warrior/arms`（職業／專精、站方 UI、裝備連結與 SPA 導航）
@@ -599,12 +605,12 @@ Wowhead widget 只碰文字節點。
 - 站名 Archon 與牧師英雄天賦 Archon (御靈者) 同名。頁首 logo 與擋廣告提示是靠
   `SKIP_CLASS_KEYWORDS` 的 `rootBreadcrumb` / `fallback__content` 擋下來的, 天賦頁的
   英雄天賦照常翻。
-- 「大秘寶庫 總覽」已於 2026-10-17 (helper v1.10.0) 放行, 走 `isSingleItemRow()`
+- 「寶庫 總覽」已於 2026-10-17 (helper v1.10.0) 放行, 走 `isSingleItemRow()`
   的形狀守則。兩邊都實地驗過: Top Gear 報告 7 列品名全部正確 (以同一列長條圖連結
   的繁中名當對照), Bonus Roll Droptimizer 報告的 `好運符 總覽` 面板 0 筆改名。
   **還沒驗到的只剩一種列**: 帶好運符伴隨模擬時長在寶庫面板裡的好運符列 (名稱是
   首領名, 圖示另掛通貨徽章 -> 同一層兩個目標)。要驗它需要一份有 bonus roll
-  companion 的 Top Gear 大秘寶庫報告。
+  companion 的 Top Gear 寶庫報告。
 - raidbots 字典缺賭博類來源的 `Gamble` / `Buy` / `Gamble/Buy`, 以及好運符列的
   `Bonus Roll · N in pool`。補之前要先在有這些欄位的報告上看過上下文。
 - `game-names-tw.js` 已於 2026-10-17 重跑 (`?v=3`), 補上 `Kith'ix` -> 克希斯 與

@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.9.3
+// @version      1.9.4
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
 // @match        https://raidbots.com/*
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.10.2
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=4
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=5
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/raidbots-zh-hant.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/raidbots-zh-hant.user.js
 // @run-at       document-start
@@ -265,7 +265,8 @@
     Priority: '優先順序',
     'Expected Value': '期望值',
     // Top Gear 報表頁（2026-10 實地掃描補上的站台字串）
-    'Great Vault': '大秘寶庫',
+    // 官方 client 字串一律是「寶庫」（DELVES_GREAT_VAULT_LABEL、GREAT_VAULT_REWARDS「寶庫獎勵」）
+    'Great Vault': '寶庫',
     'Vault Item': '寶庫物品',
     'Best Combination': '最佳組合',
     'Best Case': '最佳情況',
@@ -345,7 +346,7 @@
     'Copy and Modify...': '複製並修改...',
     'Convert to Catalyst Item': '轉化為催化物品',
     'Add socket': '新增插槽',
-    'Add socket (Great Vault)': '新增插槽（大秘寶庫）',
+    'Add socket (Great Vault)': '新增插槽（寶庫）',
     'Remove socket': '移除插槽',
     'Remove enchant': '移除附魔',
     '(Cannot afford)': '（無法負擔）',
@@ -355,8 +356,13 @@
     Hero: '英雄',
     Champion: '勇士',
     Adventurer: '冒險者',
-    Veteran: '老兵',
+    // 升級軌道的官方名（ItemNameDescription 13284「精兵」），不是「老兵」
+    Veteran: '精兵',
     Myth: '神話',
+    // Droptimizer 首領欄：小怪掉落的物品。不在字典裡會被探針當成品名改寫
+    'Trash Drop': '小怪掉落',
+    // Top Gear 說明句被 [+] 按鈕切開：「Use the」[+]「Copy and Modify menu …」
+    'Use the': '使用',
     Max: '最大',
     Lock: '鎖定',
     'Show all items': '顯示所有物品',
@@ -434,7 +440,7 @@
     'Select...': '選擇...',
     'Replace Existing Gems/Enchants': '取代現有寶石／附魔',
     'Add up to': '最多加入',
-    'prismatic sockets with': '個棱彩插槽，並使用',
+    'prismatic sockets with': '個多色插槽，並使用',
     'Will add a socket and the selected gem to items that are unsocketed.': '會在尚未有插槽的物品上新增插槽並套用所選寶石。',
     'Gem options below will still be used for existing sockets.': '下方寶石選項仍會套用到既有插槽。',
     Limitations: '限制',
@@ -445,7 +451,7 @@
     'Current selection results in only 1 valid combination. Check items for warnings, select more options, and/or check gem settings.': '目前選擇僅產生 1 個有效組合。請檢查物品警告、增加選項，或調整寶石設定。',
     'By default, SimC varies fight length for each iteration to avoid overly specific results.': '預設情況下，SimC 會在每次迭代調整戰鬥長度，避免結果過度侷限。',
     'In this sim, fight length varies from 240 to 360 seconds.': '此模擬中，戰鬥長度會在 240 到 360 秒之間變動。',
-    'Top Gear will not change your prismatic gems': 'Top Gear 不會變更你的棱彩寶石',
+    'Top Gear will not change your prismatic gems': 'Top Gear 不會變更你的多色寶石',
     'Top Gear will use the global food setting': 'Top Gear 將使用全域食物設定',
     'Top Gear will use the global flask setting': 'Top Gear 將使用全域精煉藥劑設定',
     'Top Gear will use the global potion setting': 'Top Gear 將使用全域藥水設定',
@@ -456,7 +462,7 @@
     'Warning: Item Search is only intended for max level characters and may allow simming items that cannot be obtained in game.': '警告：物品搜尋僅針對滿等角色，且可能允許模擬遊戲中無法取得的物品。',
     'This will limit how many Catalyst items are included in a single combination. You must use the': '這會限制單一組合中可包含的催化物品數量。你必須使用',
     'Copy and Modify menu on items to convert an item.': '物品上的「複製並修改」選單來轉化物品。',
-    'Copy and Modify menu to add an upgraded item to the sim.': '使用「複製並修改」選單把升級後物品加入模擬。',
+    'Copy and Modify menu to add an upgraded item to the sim.': '「複製並修改」選單把升級後物品加入模擬。',
     'Require having sparks/crests/etc available in the Item Upgrade Currency panel to use the item': '使用該物品時，要求在「裝備升級貨幣」面板中有可用火花／紋章等資源。',
     'Only show items intended for your spec (main stat, armor type, etc). Warning! Could crash your sim!': '僅顯示符合你專精的物品（主屬性、護甲類型等）。警告：可能導致模擬當機！',
     Ring: '戒指',
@@ -575,12 +581,12 @@
     'Catalyst Season 1': '第 1 季催化',
     'Catalyst Season 2': '第 2 季催化',
     'Catalyst Season 3': '第 3 季催化',
-    'Delves Season 1': '第 1 季探索',
-    'Delves Season 2': '第 2 季探索',
-    'Delves Season 3': '第 3 季探索',
-    'Prey Season 1': '第 1 季獵物',
-    'Prey Season 2': '第 2 季獵物',
-    'Prey Season 3': '第 3 季獵物',
+    'Delves Season 1': '第 1 季探究',
+    'Delves Season 2': '第 2 季探究',
+    'Delves Season 3': '第 3 季探究',
+    'Prey Season 1': '第 1 季狩獵',
+    'Prey Season 2': '第 2 季狩獵',
+    'Prey Season 3': '第 3 季狩獵',
     'PVP Season 1 (Conquest)': '第 1 季 PVP（征服）',
     'PVP Season 2 (Conquest)': '第 2 季 PVP（征服）',
     'PVP Season 3 (Conquest)': '第 3 季 PVP（征服）',
@@ -610,7 +616,7 @@
     // ────────────────────────────────────────────────────────────────────
     'Include Off-Spec Items': '包含非主專精物品',
     'Catalyst': '催化',
-    'Great Vault Item': '大秘寶庫物品',
+    'Great Vault Item': '寶庫物品',
     'Upgraded Item': '升級物品',
     'Recraft': '重製',
     'Token': '代幣',
@@ -618,7 +624,7 @@
     'Removed Enchant': '已移除附魔',
     'Removed Gems': '已移除寶石',
     'Added Socket': '已新增插槽',
-    'Added Socket from Great Vault': '來自大秘寶庫的新增插槽',
+    'Added Socket from Great Vault': '來自寶庫的新增插槽',
     'Modified Item': '已修改物品',
     'Top Gear Search': '最佳配裝搜尋',
     'Include Catalyst Items': '包含催化物品',
@@ -725,6 +731,7 @@
 
   const ENCHANT_SLOT_TW = Object.freeze({
     'main hand': '主手',
+    'off hand': '副手',
     head: '頭部',
     shoulder: '肩部',
     chest: '胸部',
@@ -961,6 +968,29 @@
     return tw + match[2];
   }
 
+  // 屬性下拉用的縮寫；全名見 game-names-tw.js 的 LABELS（ITEM_MOD_*）
+  const STAT_LIST_TW = Object.freeze({
+    sta: '耐力',
+    str: '力量',
+    agi: '敏捷',
+    int: '智力',
+  });
+
+  const STAT_LIST_RE = /^\d+\s+[A-Za-z]+(?:\s*\/\s*\d+\s+[A-Za-z]+)*$/;
+
+  /** 「10 Crit / 3 Haste」→「10 致命 / 3 加速」；有任何一項認不得就整串不動 */
+  function translateStatList(text) {
+    if (!STAT_LIST_RE.test(text)) return null;
+    let ok = true;
+    const translated = text.split('/').map((part) => {
+      const match = part.trim().match(/^(\d+)\s+([A-Za-z]+)$/);
+      const statTw = match && (translateStatLabel(match[2]) || STAT_LIST_TW[match[2].toLowerCase()]);
+      if (!statTw) ok = false;
+      return statTw ? `${match[1]} ${statTw}` : part.trim();
+    });
+    return ok ? translated.join(' / ') : null;
+  }
+
   function translateStatLabel(label) {
     const key = String(label || '').trim().toLowerCase();
     return STAT_LABEL_TW[key] || null;
@@ -1027,11 +1057,16 @@
           changed = true;
           return pieceTw;
         }
-        const difficultyMatch = piece.match(/^(heroic|mythic|myth|normal|lfr)\b(.*)$/i);
+        // 「Myth 6/6」是升級軌道（神話），不是 Mythic 難度（傳奇），兩個不能併在一起
+        const trackMatch = piece.match(/^myth\b(.*)$/i);
+        if (trackMatch) {
+          changed = true;
+          return `${EXACT_TW.Myth}${trackMatch[1]}`;
+        }
+        const difficultyMatch = piece.match(/^(heroic|mythic|normal|lfr)\b(.*)$/i);
         if (difficultyMatch) {
           changed = true;
-          const key = difficultyMatch[1].toLowerCase() === 'myth' ? 'mythic' : difficultyMatch[1].toLowerCase();
-          return `${DIFFICULTY_TW[key]}${difficultyMatch[2]}`;
+          return `${DIFFICULTY_TW[difficultyMatch[1].toLowerCase()]}${difficultyMatch[2]}`;
         }
         return piece;
       });
@@ -1075,7 +1110,9 @@
     if (topGearGlobalSettingMatch) {
       const param = topGearGlobalSettingMatch[1].trim();
       const paramTw = EXACT_TW[param] || EXACT_TW_CI[param.toLowerCase()] || param;
-      return replaceTrimmed(text, trimmed, `Top Gear 將使用全域 ${paramTw} 設定`);
+      // 「food」可能已經先被逐節點翻成「食物」，中文詞前後不留空格
+      const padded = /^[A-Za-z]/.test(paramTw) ? ` ${paramTw} ` : paramTw;
+      return replaceTrimmed(text, trimmed, `Top Gear 將使用全域${padded}設定`);
     }
 
     const lowLevelHiddenMatch = trimmed.match(/^(\d+)\s+low\s+level\s+items?\s+hidden\.\s*(.+)$/i);
@@ -1139,7 +1176,13 @@
       const right = sourceWithSuffix[2].trim();
       const leftTw = translateDungeon(left) || EXACT_TW[left] || EXACT_TW_CI[left.toLowerCase()] || left;
       const rightTw = translateSuffix(right);
-      if (leftTw !== left || rightTw !== right) {
+      // 只翻得動一邊就整串不動：「Vault - 普通」比原文更怪，而同一組的
+      // Vault - Hard / Vault - Nightmare 還是英文
+      // 站名 Raidbots 本來就不翻（分頁標題「掉落最佳化 - Raidbots」），不算卡住
+      const isStuck = (raw, tw) => tw === raw && /[A-Za-z]{2,}/.test(raw) && raw !== 'Raidbots';
+      const leftStuck = isStuck(left, leftTw);
+      const rightStuck = isStuck(right, rightTw);
+      if ((leftTw !== left || rightTw !== right) && !leftStuck && !rightStuck) {
         return replaceTrimmed(text, trimmed, `${leftTw} - ${rightTw}`);
       }
     }
@@ -1188,12 +1231,13 @@
       return replaceTrimmed(text, trimmed, `${setMatch[1]} 件套`);
     }
 
-    const maxSelectionMatch = trimmed.match(/^Max\s+(\d+)\s+selections$/i);
+    // 「Max」常先被逐節點翻成「最大」，合併節點後才看到後半句，兩種寫法都要認
+    const maxSelectionMatch = trimmed.match(/^(?:Max|最大)\s+(\d+)\s+selections?$/i);
     if (maxSelectionMatch) {
       return replaceTrimmed(text, trimmed, `最多選擇 ${maxSelectionMatch[1]} 項`);
     }
 
-    const hiddenItemMatch = trimmed.match(/^(\d+)\s+low level item hidden\.$/i);
+    const hiddenItemMatch = trimmed.match(/^(\d+)\s+low level items? hidden\.$/i);
     if (hiddenItemMatch) {
       return replaceTrimmed(text, trimmed, `已隱藏 ${hiddenItemMatch[1]} 件低等級物品。`);
     }
@@ -1212,6 +1256,13 @@
       if (statTw) {
         return replaceTrimmed(text, trimmed, `${singleStatValue[1]} ${statTw}`);
       }
+    }
+
+    // 寶石／食物下拉的屬性說明：「10 Crit / 3 Haste」「22 Haste / 22 Mastery」「18 Sta」。
+    // 翻不動就會被探針當成品名，三個等級的寶石全部變成同一個寶石名。
+    const statList = translateStatList(trimmed);
+    if (statList) {
+      return replaceTrimmed(text, trimmed, statList);
     }
 
     const dualStatValue = trimmed.match(
