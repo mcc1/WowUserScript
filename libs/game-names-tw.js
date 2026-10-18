@@ -7,10 +7,10 @@
  *
  * 改版後請重跑：node tools/generate-game-names.mjs
  *
- * 產生時間：2026-10-17T16:33:34.731Z
+ * 產生時間：2026-10-18T01:11:28.547Z
  * NAMES：3000 筆別名（副本／團本／首領，1375 個實體）
  * UNITS：320 筆別名（種族／職業／專精，210 個實體）
- * LABELS：17 筆逐列登記的字串（鑲飾效果／系統名／屬性名）
+ * LABELS：18 筆逐列登記的字串（鑲飾效果／系統名／屬性名）
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
@@ -3353,6 +3353,7 @@
   const LABELS = Object.freeze({
     "agility": "敏捷",
     "avoidance": "迴避",
+    "biteofzuljan": "祖爾詹之咬",
     "criticalstrike": "致命一擊",
     "haste": "加速",
     "intellect": "智力",
