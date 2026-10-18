@@ -1,6 +1,6 @@
 /**
  * Wowhead Traditional Chinese Helper Library (WowheadTwHelper)
- * @version 1.10.2
+ * @version 1.10.3
  * @description Shared library for UserScripts to localize Wowhead links, tooltips, and handle SPA dynamic updates safely.
  * @license MIT
  */
@@ -363,7 +363,11 @@
         const pending = [];
 
         for (const job of jobs) {
-          const renamed = (job.probe.textContent || '').trim();
+          let renamed = (job.probe.textContent || '').trim();
+          // 附魔的圖示是附魔卷軸（item=244007「附魔頭盔 - 強化迴避符文」），站方
+          // 只印「 - 」後面的附魔名。原文沒有前綴時譯名也不能帶。
+          const scrollPrefix = renamed.match(/^附魔\S* - (.+)$/);
+          if (scrollPrefix && job.original.indexOf(' - ') === -1) renamed = scrollPrefix[1];
 
           const target = job.target;
           if (renamed && renamed !== job.original && !INVALID_PROBE_TEXTS.has(renamed.toLowerCase())) {
