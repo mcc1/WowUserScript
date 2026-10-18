@@ -614,7 +614,8 @@
     'Season 3': '第 3 季',
     'The Coiled Isle': '盤蛇島',
     'Coiled Isle': '盤蛇島',
-    'Curse of Ula\'tek': '烏拉泰克的詛咒',
+    // 詞綴名本身 client 查不到；人名依 SpellName 1288103「烏拉特克的佈道」
+    'Curse of Ula\'tek': '烏拉特克的詛咒',
     'Epic Profession Items': '史詩專業物品',
     'Rare Profession Items': '稀有專業物品',
     'PVP Profession Items': 'PVP 專業物品',
