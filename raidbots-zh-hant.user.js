@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.9.4
+// @version      1.9.5
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
@@ -221,7 +221,7 @@
     'Paste input from the': '貼上來自',
     'addon.': '插件的輸入。',
     'Share Setup': '分享設定',
-    'Create an account to save reports': '建立帳號以儲存報表',
+    'Create an account to save reports': '建立帳號以儲存報告',
     'Load your character from the Armory or SimC addon above': '請先從上方的戰網檔案或 SimC 插件載入角色',
     // 報表頁：站方把數字拆成獨立文字節點，整句字典比不到，只能翻剩下的碎片
     '« Back to': '« 返回',
@@ -273,10 +273,14 @@
     Guaranteed: '保證獲得',
     'Guaranteed DPS': '保證獲得的 DPS',
     'No vault reward': '沒有寶庫獎勵',
-    'Equipped Gear - Optimized': '已裝備的裝備 - 已最佳化',
+    'Equipped Gear - Optimized': '目前裝備（最佳化）',
     'Prefer Fewest Changes if Sidegrade': '同等結果時優先更動最少',
     'Show Gem/Enchant Variations': '顯示寶石／附魔變體',
     'Shopping List': '購物清單',
+    // 購物清單浮層（Gems 在下面的通用區已經有了）
+    Enchants: '附魔',
+    'Paste into Auctionator → Import': '貼到 Auctionator → 匯入',
+    'Copy Shopping List': '複製購物清單',
     'Total upgrade cost:': '總升級花費：',
     'More Details': '更多細節',
     // 結果表上方那句被連結切成兩段。sidegrade 是站台自創術語（換了也差不多的
@@ -314,6 +318,14 @@
     'Show Smart Sim Stage': '顯示 Smart Sim 階段',
     'Raw Input': '原始輸入',
     'Original Addon Input': '原始插件輸入',
+    // 「原始輸入」區的說明被 <a>SimulationCraft program</a> 切成兩段
+    'This text is intended to be used with a downloaded version of the': '這段文字供下載版的',
+    'SimulationCraft program': 'SimulationCraft 程式使用',
+    'Results may differ - Raidbots uses a custom build that may differ from the SimulationCraft nightly build':
+      '結果可能不同 - Raidbots 使用自訂建置，可能與 SimulationCraft 的每夜建置版不同',
+    'Note! On Raidbots, this input will only work in the Advanced tool!': '注意！在 Raidbots 上，這段輸入只能用於進階模擬！',
+    'Unable to fetch input': '無法取得輸入',
+    'Original input from SimulationCraft addon': '來自 SimulationCraft 插件的原始輸入',
     'Simulation Details': '模擬細節',
 
     // libs/game-names-tw.js 的官方表處理 —— 那會譯成首領名而失去原意。
@@ -331,8 +343,8 @@
     'SimC Build Date': 'SimC 建置時間',
     'SimC Git Hash': 'SimC Git 雜湊',
     'Raw Files': '原始檔案',
-    'Report disabled for large simulation': '大型模擬已停用報表',
-    'Share Report URL': '分享報表連結',
+    'Report disabled for large simulation': '大型模擬已停用報告',
+    'Share Report URL': '分享報告連結',
     'Support / Help': '支援 / 說明',
     Developers: '開發者',
     'Blog Archive': '部落格存檔',
@@ -437,7 +449,7 @@
     'Simulation Options:': '模擬選項：',
     'Custom APL and SimC Options:': '自訂 APL 與 SimC 選項：',
     'SimC Defaults': 'SimC 預設值',
-    'Report and Notification Options': '報表與通知選項',
+    'Report and Notification Options': '報告與通知選項',
     'Show Simc Input': '顯示 SimC 輸入',
     'Select...': '選擇...',
     'Replace Existing Gems/Enchants': '取代現有寶石／附魔',
@@ -1054,6 +1066,29 @@
     if (hotfixMatch) {
       const dateTw = translateDate(hotfixMatch[1]);
       return replaceTrimmed(text, trimmed, `Raidbots 已更新至最新的 ${dateTw} 線上修正`);
+    }
+
+    // 角色名旁的外部連結 title：「殘月雪 on WoW Armory」
+    const profileLinkMatch = trimmed.match(/^(.+) on (WoW Armory|Warcraft Logs|Raider\.IO)$/);
+    if (profileLinkMatch) {
+      // 站名 Warcraft Logs／Raider.IO 不翻，英文前面留空格
+      const siteTw = profileLinkMatch[2] === 'WoW Armory' ? EXACT_TW.Armory : ` ${profileLinkMatch[2]}`;
+      return replaceTrimmed(text, trimmed, `${profileLinkMatch[1]} 的${siteTw}`);
+    }
+
+    // 寶庫徽章 GV* 的 title 是組合字串：Great Vault Item & Upgraded Item & Catalyzed from <物品名>。
+    // 每一段都翻得動才換，否則整串保留原文（屬性「10 Crit & 5 Haste」交給下面的規則）。
+    if (trimmed.includes(' & ')) {
+      const pieces = trimmed.split(' & ').map((piece) => {
+        const catalyzedMatch = piece.match(/^Catalyzed from (.+)$/);
+        if (catalyzedMatch) {
+          return `催化自 ${catalyzedMatch[1]}`;
+        }
+        return EXACT_TW[piece] || null;
+      });
+      if (pieces.every(Boolean)) {
+        return replaceTrimmed(text, trimmed, pieces.join('、'));
+      }
     }
 
     // 報表標題是站方用「 • 」串起來的：Droptimizer • Bonus Rolls • Heroic + M10 • Myth 6/6
