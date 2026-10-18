@@ -520,6 +520,15 @@ node tools/generate-game-names.mjs --self-test   # 產生器模板
 2. 新增任何疊在圖示上的短標籤時，要一併加進 `registerNonItemNames`。
    函式庫本身已擋掉「5 字元以內的全大寫字串」（真正的裝備名一定含小寫字母）。
 
+## SPA 站的 `@match` 要涵蓋使用者「落地」的那一頁
+
+userscript manager 只在**整頁載入**時比對 `@match`；之後站內 SPA 換頁不會再注入。
+KeystoneLoot 原本只寫 `https://keystoneloot.io/en/*`，但打 `keystoneloot.io` 會被 307
+導到 `/en`（沒有尾斜線），不符合 `/en/*` —— 腳本根本沒注入，點進職業頁一路都是英文，
+直到使用者在 `/en/classes/...` 按重新整理才第一次注入（使用者回報「第一次打開都是英文
+需要刷新一次」，2026-10-18，v0.6.2 修正）。archon 同時列 `/wow` 與 `/wow/*` 就是同一個
+道理。新增站台時先 `curl -sS -o /dev/null -w '%{redirect_url}' <首頁>` 看落地網址。
+
 ## raidbots Top Gear 比較列的 `Avoid2`：不是裝備名，而且只有兩個字的額度
 
 比較列每個圖示下面那行小字 (`Avoid2`、`CritPct2`、`Pri2`) 是**附魔／寶石簡碼**:
