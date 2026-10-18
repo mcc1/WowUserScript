@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.9.7
+// @version      1.9.8
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
@@ -390,6 +390,12 @@
     'Delve Tier': '探究級別',
     'Soul Fragments': '靈魂碎片',
     'Prey Difficulty': '狩獵難度',
+    // 狩獵難度：普通／困難／夢魘。client 字串查不到，依使用者確認的遊戲內用語（2026-10-18）
+    Hard: '困難',
+    Nightmare: '夢魘',
+    // 來源面板的鍛造標籤。client 只有 ItemNameDescription 14484「Ascendant Venomforged」
+    // （卓越劇毒鍛造），沒有不帶 Ascendant 的列；依使用者決定先用「劇毒鍛造」（2026-10-18）
+    Venomforged: '劇毒鍛造',
     'Bonus Roll Sources': '好運符來源',
     'Raid Only': '僅團隊副本',
     'M+ Only': '僅傳奇鑰石',
@@ -1118,6 +1124,18 @@
     const tierVaultMatch = trimmed.match(/^Vault (\d+\+?)$/);
     if (tierVaultMatch) {
       return replaceTrimmed(text, trimmed, `${EXACT_TW['Great Vault']} ${tierVaultMatch[1]}`);
+    }
+
+    // 狩獵的寶庫列：「Vault - Normal」「Vault - Hard」「Vault - Nightmare」
+    const preyVaultMatch = trimmed.match(/^Vault - (Normal|Hard|Nightmare)$/);
+    if (preyVaultMatch) {
+      return replaceTrimmed(text, trimmed, `${EXACT_TW['Great Vault']} - ${EXACT_TW[preyVaultMatch[1]]}`);
+    }
+
+    // 「Venomforged (Hero)」「Venomforged (Myth)」：鍛造標籤帶升級軌道
+    const forgedTrackMatch = trimmed.match(/^(Venomforged) \((Adventurer|Veteran|Champion|Hero|Myth)\)$/);
+    if (forgedTrackMatch) {
+      return replaceTrimmed(text, trimmed, `${EXACT_TW[forgedTrackMatch[1]]}（${EXACT_TW[forgedTrackMatch[2]]}）`);
     }
 
     // 探究級別：「Bountiful 3」是豐碩探究（DELVES_JOURNEY_TIP「豐碩探究」）的級別。

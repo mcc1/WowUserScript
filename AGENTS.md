@@ -647,8 +647,11 @@ Wowhead widget 只碰文字節點。
   (ItemNameDescription 14528/13284/14156)。Hero 與 Myth 沒有, KeystoneLoot 字典裡的
   「英雄」「神話」取自同季紋章名 (CurrencyTypes 3440/3441) 去掉「迷霧紋章」。
   注意舊的 ItemNameDescription 14082 把 Myth 寫成「傳奇」, 那是舊季的字串。
-- 狩獵 (Prey) 的 Hard／Nightmare 難度名在 client 字串裡找不到, KeystoneLoot 的
-  「困難」「惡夢」是非官方譯名。
+- 狩獵 (Prey) 的 Hard／Nightmare 難度名在 client 字串裡找不到。使用者確認遊戲內的
+  分級是「普通／困難／夢魘」(2026-10-18), raidbots 已照這個寫; KeystoneLoot 目前寫
+  「惡夢」, 要改成「夢魘」。
+- raidbots 來源面板的 `Venomforged` 在 client 只有 `Ascendant Venomforged`
+  (ItemNameDescription 14484「卓越劇毒鍛造」), 依使用者決定先寫「劇毒鍛造」。
 - Ula'tek 的官方寫法是「烏拉特克」(SpellName 1288103「烏拉特克的佈道」)。
   raidbots 原本寫成「烏拉泰克的詛咒」, 已於 v1.9.6 改正。
 - archon 英雄天賦排行的縮寫表 (`SPEC_ABBR`／`CLASS_ABBR`) 是照使用者回報的三列
