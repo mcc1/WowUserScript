@@ -650,7 +650,7 @@ Wowhead widget 只碰文字節點。
 - 狩獵 (Prey) 的 Hard／Nightmare 難度名在 client 字串裡找不到, KeystoneLoot 的
   「困難」「惡夢」是非官方譯名。
 - Ula'tek 的官方寫法是「烏拉特克」(SpellName 1288103「烏拉特克的佈道」)。
-  raidbots 的 `'Curse of Ula\'tek': '烏拉泰克的詛咒'` 寫錯了, 還沒改。
+  raidbots 原本寫成「烏拉泰克的詛咒」, 已於 v1.9.6 改正。
 - archon 英雄天賦排行的縮寫表 (`SPEC_ABBR`／`CLASS_ABBR`) 是照使用者回報的三列
   推出來的, 沒有在實際頁面上看過完整一欄。footer、廣告區塊、首頁字串也還沒掃 ——
   archon 擋 Cloudflare, 要請使用者在瀏覽器 console 跑掃描。
