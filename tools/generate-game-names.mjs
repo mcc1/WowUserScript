@@ -91,6 +91,64 @@ const LABEL_TABLES = [
       // raidbots Top Gear 的「套裝」面板標題是套裝名，旁邊掛著其中一件的圖示。
       // 查不到譯名時探針會把它當成品名，改寫成那件飾品的名字。
       '2070', // Bite of Zul'jan
+      // archon「裝備 & 套裝」頁的套裝標題（至暗之夜第 2 季，13 職業）
+      '2055', // Baleful Grave-Knight's Crucible
+      '2056', // Abyssal Doomhound's Pursuit
+      '2057', // Bark of the Enigmatic Dreamwatcher
+      '2058', // Echo of Calamity
+      '2059', // Skulking Viper's Ambush
+      '2060', // Primal Leywarden's Attire
+      '2061', // Guile of the Monkey King
+      '2062', // Radiance of the Consecrated Flame
+      '2063', // Cosmic Penitent's Raiment
+      '2064', // Chosen Bloodslayer's Hexweave
+      '2065', // Ophidian Oracle's Prophecy
+      '2066', // Damned Necrolyte's Shattered Restraints
+      '2067', // Jade Warlord's Dominion
+    ],
+  },
+  {
+    db2: 'ItemNameDescription',
+    column: 'Description_lang',
+    key: 'ID',
+    values: [
+      // 升級軌道名（KeystoneLoot 首頁與 /upgrades 的「Champion 3/6」）。
+      // Hero／Myth 沒有單獨成列的字串，見 libs/keystoneloot-tw.js。
+      '14528', // Adventurer
+      '13284', // Veteran
+      '14156', // Champion
+    ],
+  },
+  {
+    db2: 'CurrencyTypes',
+    column: 'Name_lang',
+    key: 'ID',
+    values: [
+      // 至暗之夜第 2 季的升級紋章（KeystoneLoot /upgrades、/raid 的紋章表與 title）。
+      // 3442–3446 是同名的製作用版本，登記一組就夠。
+      '3437', // Adventurer Mistcrest
+      '3438', // Veteran Mistcrest
+      '3439', // Champion Mistcrest
+      '3440', // Hero Mistcrest
+      '3441', // Myth Mistcrest
+    ],
+  },
+  {
+    db2: 'ItemSparse',
+    column: 'Display_lang',
+    key: 'ID',
+    values: [
+      // KeystoneLoot 紋章表的來源欄「Trovehunter's Bounty 4–5」
+      '252415', // Trovehunter's Bounty
+    ],
+  },
+  {
+    db2: 'AreaTable',
+    column: 'AreaName_lang',
+    key: 'ID',
+    values: [
+      // KeystoneLoot「紋章降級兌換」那句的地點（至暗之夜版的銀月城）
+      '15969', // Silvermoon City
     ],
   },
 ];

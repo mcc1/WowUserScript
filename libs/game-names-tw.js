@@ -7,10 +7,10 @@
  *
  * 改版後請重跑：node tools/generate-game-names.mjs
  *
- * 產生時間：2026-10-18T01:11:28.547Z
+ * 產生時間：2026-10-18T10:56:00.285Z
  * NAMES：3000 筆別名（副本／團本／首領，1375 個實體）
  * UNITS：320 筆別名（種族／職業／專精，210 個實體）
- * LABELS：18 筆逐列登記的字串（鑲飾效果／系統名／屬性名）
+ * LABELS：41 筆逐列登記的字串（鑲飾效果／系統名／屬性名）
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
@@ -3351,24 +3351,47 @@
 
   // 站台直接印在畫面上的遊戲字串（鑲飾效果／系統名／屬性名）
   const LABELS = Object.freeze({
+    "abyssaldoomhoundspursuit": "深淵末日獵犬獵裝",
+    "adventurer": "冒險者",
+    "adventurermistcrest": "冒險者迷霧紋章",
     "agility": "敏捷",
     "avoidance": "迴避",
+    "balefulgraveknightscrucible": "邪怨守墓騎士爐缸",
+    "barkoftheenigmaticdreamwatcher": "謎夢守衛者樹皮",
     "biteofzuljan": "祖爾詹之咬",
+    "champion": "勇士",
+    "championmistcrest": "勇士迷霧紋章",
+    "chosenbloodslayershexweave": "天選屠血者咒織",
+    "cosmicpenitentsraiment": "宇宙懺悔衣飾",
     "criticalstrike": "致命一擊",
+    "damnednecrolytesshatteredrestraints": "詛咒通靈師粉碎束具",
+    "echoofcalamity": "災禍回音",
+    "guileofthemonkeyking": "美猴王之詐",
     "haste": "加速",
+    "heromistcrest": "英雄迷霧紋章",
     "intellect": "智力",
+    "jadewarlordsdominion": "翠玉督軍統御",
     "leech": "汲取",
     "mastery": "精通",
+    "mythmistcrest": "神話迷霧紋章",
     "omniumfolio": "萬象儀對開本",
+    "ophidianoraclesprophecy": "爬蛇神諭者預言",
+    "primalleywardensattire": "原脈看守者裝束",
     "primarystat": "主要屬性",
+    "radianceoftheconsecratedflame": "聖化烈焰光輝",
+    "silvermooncity": "銀月城",
+    "skulkingvipersambush": "潛伏毒蛇之伏",
     "speed": "速度",
     "stamina": "耐力",
     "strength": "力量",
+    "trovehuntersbounty": "寶箱獵人的獎賞",
     "venomcursedascendance": "咒毒晉升",
     "venomcursedcriticalstrike": "咒毒致命一擊",
     "venomcursedhaste": "咒毒加速",
     "venomcursedmastery": "咒毒精通",
     "versatility": "臨機應變",
+    "veteran": "精兵",
+    "veteranmistcrest": "精兵迷霧紋章",
   });
 
   // 各分類的官方英文名（供呼叫端做前綴比對／識別用）
