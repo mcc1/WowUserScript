@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         KeystoneLoot Traditional Chinese
 // @namespace    https://keystoneloot.io/
-// @version      0.5.2
+// @version      0.6.0
 // @description  Translate KeystoneLoot WoW class pages to Traditional Chinese and patch Wowhead links.
 // @author       mcc
 // @match        https://keystoneloot.io/en/*
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.10.3
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=5
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/keystoneloot-tw.js?v=1.2.0
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=6
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/keystoneloot-tw.js?v=1.3.0
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/keystoneloot-zh-hant.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/keystoneloot-zh-hant.user.js
 // @run-at       document-start
@@ -57,6 +57,127 @@
     } catch (_) {
       return null;
     }
+  }
+
+  /** 站方直接印出的遊戲字串（升級軌道、紋章、地點）。逐列登記在產生器的 LABEL_TABLES */
+  function lookupGameLabel(value) {
+    const table = gameNames();
+    if (!table || typeof table.lookupLabel !== 'function' || !value) return null;
+    try {
+      return table.lookupLabel(value);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /** 升級軌道名：Adventurer／Veteran／Champion 走 LABELS，Hero／Myth 走字典 */
+  function translateTrack(value) {
+    return lookupGameLabel(value) || exactTw[value] || null;
+  }
+
+  const DIFFICULTY_KEYS = ['LFR', 'Normal', 'Heroic', 'Mythic', 'World'];
+
+  const MONTH_NUMBER = Object.freeze({
+    Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6,
+    Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12,
+  });
+
+  /** 「In Midnight Season 2 … : Adventurer, Veteran, Champion, Hero and Myth.」裡的軌道清單 */
+  function translateTrackList(value) {
+    const tracks = value.split(/,\s*|\s+and\s+/);
+    const translated = tracks.map((track) => translateTrack(track.trim()));
+    return translated.every(Boolean) ? translated.join('、') : null;
+  }
+
+  // 帶數字或遊戲名稱的站方句型。每條都只吃完整的一個文字節點。
+  const PATTERN_RULES = [
+    // 升級軌道帶階數：「Champion 3/6」
+    {
+      re: /^(Adventurer|Veteran|Champion|Hero|Myth) (\d+\/\d+)$/,
+      tw: (m) => {
+        const track = translateTrack(m[1]);
+        return track ? `${track} ${m[2]}` : null;
+      },
+    },
+    // 頁首的版本標籤：「Midnight · Season 2 · 12.1.0」，版本號與季數會變
+    {
+      re: /^(\S+) · Season (\d+)(?: · (\d+(?:\.\d+)+))?$/,
+      tw: (m) => {
+        const expansion = exactTw[m[1]];
+        if (!expansion) return null;
+        return `${expansion} · 第 ${m[2]} 季${m[3] ? ` · ${m[3]}` : ''}`;
+      },
+    },
+    { re: /^(\d+) bosse?s?$/, tw: (m) => `${m[1]} 個首領` },
+    { re: /^(\d+) items? contested$/, tw: (m) => `${m[1]} 件物品重疊` },
+    {
+      re: /^(\d+) classes, (\d+) specs\. Each one carries its own list for overall, Mythic\+ only, and raid only\.$/,
+      tw: (m) => `${m[1]} 個職業、${m[2]} 個專精。每個專精都有各自的清單：總體、僅傳奇鑰石、僅團隊副本。`,
+    },
+    // /raid：「The Venomous Abyss has 8 bosses. Loot runs from item level 279 on LFR to …」
+    {
+      re: /^(.+?) has (\d+) bosse?s?\. Loot runs from item level (\d+) on (\w+) to item level (\d+) on (\w+)\. (\d+) items? from here appears? in at least one best in slot list\.$/,
+      tw: (m) => {
+        const raid = lookupGameName(m[1]);
+        if (!raid || !DIFFICULTY_KEYS.includes(m[4]) || !DIFFICULTY_KEYS.includes(m[6])) return null;
+        return `${raid}共有 ${m[2]} 個首領。掉落的物品等級從${exactTw[m[4]]}的 ${m[3]} 到${exactTw[m[6]]}的 ${m[5]}。這裡有 ${m[7]} 件物品出現在至少一份最佳配裝清單中。`;
+      },
+    },
+    // /upgrades 開頭那段
+    {
+      re: /^In (\S+) Season (\d+) an item climbs (\d+) upgrade tracks: (.+?)\. The highest is (\w+): (\d+) ranks, from item level (\d+) to (\d+)\. Each track has its own mistcrest, and one rank costs (\d+) of them\.$/,
+      tw: (m) => {
+        const expansion = exactTw[m[1]];
+        const list = translateTrackList(m[4]);
+        const top = translateTrack(m[5]);
+        if (!expansion || !list || !top) return null;
+        return `在${expansion}第 ${m[2]} 季，裝備有 ${m[3]} 條升級軌道：${list}。最高的是${top}：共 ${m[6]} 階，物品等級從 ${m[7]} 到 ${m[8]}。每條軌道都有自己的迷霧紋章，升一階要花 ${m[9]} 個。`;
+      },
+    },
+    { re: /^(\d+\/\d+) → (\d+\/\d+) · (\d+) crests$/, tw: (m) => `${m[1]} → ${m[2]} · ${m[3]} 個紋章` },
+    {
+      re: /^Season (\d+) pays out Mistcrests\. Each kind upgrades exactly one track, so the crest you are short of tells you which content to run\.$/,
+      tw: (m) => `第 ${m[1]} 季發放的是迷霧紋章。每一種只能升級一條軌道，所以缺哪種紋章，就知道該去打哪種內容。`,
+    },
+    // 紋章來源欄。「級別」照 GlobalStrings WEEKLY_REWARDS_COMPLETE_WORLD 的「探究（級別1-11）」
+    { re: /^Delves (\d+(?:–\d+)?\+?)$/, tw: (m) => `探究（級別 ${m[1]}）` },
+    {
+      re: /^(Trovehunter's Bounty) (\d+(?:–\d+)?\+?)$/,
+      tw: (m) => {
+        const name = lookupGameLabel(m[1]);
+        return name ? `${name}（級別 ${m[2]}）` : null;
+      },
+    },
+    { re: /^Mythic\+ (\d+)–(\d+)$/, tw: (m) => `傳奇鑰石 ${m[1]}–${m[2]}` },
+    { re: /^Mythic\+ (\d+) and higher$/, tw: (m) => `傳奇鑰石 ${m[1]} 以上` },
+    // NPC 名沒有 ID 可查，照原文；地點走 LABELS（AreaTable）
+    {
+      re: /^Spare crests are not stuck\. (.+?) in (.+?) \(([\d.]+), ([\d.]+)\) sells a bundle of (\d+) crests of the tier below for (\d+) of the one above\. One for one, nothing lost in the trade\.$/,
+      tw: (m) => {
+        const place = lookupGameLabel(m[2]);
+        if (!place) return null;
+        return `多出來的紋章不會卡在手上。${place}（${m[3]}, ${m[4]}）的 ${m[1]} 會用 ${m[6]} 個高一級的紋章，換 ${m[5]} 個低一級的紋章。一換一，不會有損失。`;
+      },
+    },
+    {
+      re: /^, where it has been downloaded ([\d.,]+[KMB]?) times so far\. The list for your own spec is under$/,
+      tw: (m) => `，目前已累計下載 ${m[1]} 次。你自己專精的清單在`,
+    },
+    // /tier-list 的更新時間：「Oct 5, 2026, 9:02 AM」
+    {
+      re: /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{1,2}), (\d{4}), (\d{1,2}):(\d{2}) (AM|PM)$/,
+      tw: (m) => `${m[3]} 年 ${MONTH_NUMBER[m[1]]} 月 ${m[2]} 日 ${m[6] === 'AM' ? '上午' : '下午'} ${m[4]}:${m[5]}`,
+    },
+  ];
+
+  function translatePattern(value) {
+    for (const rule of PATTERN_RULES) {
+      const match = value.match(rule.re);
+      if (!match) continue;
+      const translated = rule.tw(match);
+      if (translated) return translated;
+    }
+    return null;
   }
 
   function translateGameSource(value) {
@@ -384,6 +505,17 @@
     // generated lookup 把其中的 Cookie 當成同名遊戲資料。
     if (/\bcookies?\b/i.test(trimmed)) return null;
 
+    // 升級軌道名、紋章名等逐列登記的遊戲字串（完全比對）
+    const gameLabel = lookupGameLabel(trimmed);
+    if (gameLabel) {
+      return replaceTrimmed(text, trimmed, gameLabel);
+    }
+
+    const pattern = translatePattern(trimmed);
+    if (pattern) {
+      return replaceTrimmed(text, trimmed, pattern);
+    }
+
     const statParagraph = translateStatParagraph(trimmed)
       || translateGuideStatSentence(trimmed)
       || translateLogsPlayerSentence(trimmed);
@@ -595,10 +727,24 @@
       return;
     }
 
+    // 首頁：「KeystoneLoot: Best in slot item lists for Midnight Season 2」
+    const homeMatch = document.title.match(/^KeystoneLoot: Best in slot item lists for (\S+) Season (\d+)$/);
+    if (homeMatch) {
+      const expansion = exactTw[homeMatch[1]];
+      if (expansion) document.title = `KeystoneLoot：${expansion}第 ${homeMatch[2]} 季最佳配裝清單`;
+      return;
+    }
+
     const match = document.title.match(/^(.+?)\s+·\s+KeystoneLoot$/);
     if (!match) return;
 
-    const translated = translateText(match[1]) || translateGameSequence(match[1]);
+    let translated = translateText(match[1]) || translateGameSequence(match[1]);
+    // 「WoW Mythic+ Tier List · Season 2」：整串比不到就逐段翻
+    if (!translated && match[1].includes(' · ')) {
+      const pieces = match[1].split(' · ');
+      const piecesTw = pieces.map((piece) => translateText(piece) || piece);
+      if (piecesTw.some((piece, index) => piece !== pieces[index])) translated = piecesTw.join(' · ');
+    }
     if (translated && translated !== match[1]) {
       document.title = `${translated} · KeystoneLoot`;
     }

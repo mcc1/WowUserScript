@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         Archon.gg Traditional Chinese
 // @namespace    https://www.archon.gg/
-// @version      0.13.1
+// @version      0.14.0
 // @description  Translate archon.gg WoW build pages to Traditional Chinese.
 // @author       mcc
 // @match        https://www.archon.gg/wow
 // @match        https://www.archon.gg/wow/*
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.10.3
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=5
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=6
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/archon-zh-hant.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/archon-zh-hant.user.js
 // @run-at       document-start
@@ -56,6 +56,17 @@
     'Sethraliss': 'Temple of Sethraliss',
   });
 
+  /** 站方直接印出的遊戲字串（套裝名等）。逐列登記在產生器的 LABEL_TABLES */
+  function lookupGameLabel(value) {
+    const table = gameNames();
+    if (!table || typeof table.lookupLabel !== 'function' || !value) return null;
+    try {
+      return table.lookupLabel(value);
+    } catch (_) {
+      return null;
+    }
+  }
+
   function lookupGameName(value) {
     const table = gameNames();
     if (!table || typeof table.lookup !== 'function' || !value) return null;
@@ -80,6 +91,47 @@
 
   const CLASS_TW = buildUnitMap('classes');
   const SPEC_TW = buildUnitMap('specs');
+  const HERO_TW = buildUnitMap('heroTalents');
+
+  // 強度排行頁的英雄天賦表把專精／職業縮寫成「Deathstalker Assa Rogue」
+  // 「Aldrachi Reaver Havoc DH」。這兩張是站方縮寫 → 官方英文全名（英文對英文），
+  // 中文仍由 game-names-tw.js 提供。查不到的縮寫整列保留英文。
+  const SPEC_ABBR = Object.freeze({
+    'Assa': 'Assassination',
+    'Sin': 'Assassination',
+    'Sub': 'Subtlety',
+    'Ele': 'Elemental',
+    'Enh': 'Enhancement',
+    'Resto': 'Restoration',
+    'WW': 'Windwalker',
+    'MW': 'Mistweaver',
+    'BrM': 'Brewmaster',
+    'Brew': 'Brewmaster',
+    'BM': 'Beast Mastery',
+    'MM': 'Marksmanship',
+    'Surv': 'Survival',
+    'SV': 'Survival',
+    'Ret': 'Retribution',
+    'Prot': 'Protection',
+    'Disc': 'Discipline',
+    'Aff': 'Affliction',
+    'Demo': 'Demonology',
+    'Destro': 'Destruction',
+    'Aug': 'Augmentation',
+    'Dev': 'Devastation',
+    'Pres': 'Preservation',
+    'Bal': 'Balance',
+    'Veng': 'Vengeance',
+  });
+  const CLASS_ABBR = Object.freeze({
+    'DH': 'Demon Hunter',
+    'DK': 'Death Knight',
+    'Pala': 'Paladin',
+    'Pally': 'Paladin',
+    'Lock': 'Warlock',
+    'Sham': 'Shaman',
+    'Evo': 'Evoker',
+  });
 
   // 完整比對的 UI 字串
   const EXACT_TW = Object.freeze({
@@ -364,6 +416,9 @@
     "What's this?": '這是什麼？',
     'Open Menu': '開啟選單',
     'Close Ad': '關閉廣告',
+    // 英雄天賦排行表的欄位
+    'Hero Specialization': '英雄天賦',
+    'Tree %': '天賦樹佔比',
 
     // 遊戲版本選單
     'WoW - Midnight': 'WoW - 至暗之夜',
@@ -405,6 +460,27 @@
 
   const SORTED_CLASSES = Object.keys(CLASS_TW).sort((a, b) => b.length - a.length);
   const SORTED_SPECS = Object.keys(SPEC_TW).sort((a, b) => b.length - a.length);
+
+  /** 「Conduit of the Celestials WW Monk」→「天神御使 御風 武僧」；任何一段查不到就回 null */
+  function translateHeroSpecClassRow(text) {
+    let hero = '';
+    for (const name of Object.keys(HERO_TW)) {
+      if (name.length > hero.length && text.startsWith(name + ' ')) hero = name;
+    }
+    if (!hero) return null;
+
+    const words = text.slice(hero.length + 1).split(' ');
+    for (let cut = words.length - 1; cut >= 1; cut -= 1) {
+      const specRaw = words.slice(0, cut).join(' ');
+      const classRaw = words.slice(cut).join(' ');
+      const spec = SPEC_TW[specRaw] ? specRaw : SPEC_ABBR[specRaw];
+      const cls = CLASS_TW[classRaw] ? classRaw : CLASS_ABBR[classRaw];
+      if (spec && cls && SPEC_TW[spec] && CLASS_TW[cls]) {
+        return `${HERO_TW[hero]} ${SPEC_TW[spec]} ${CLASS_TW[cls]}`;
+      }
+    }
+    return null;
+  }
 
   function translateSpecClassPhrase(text) {
     for (const spec of SORTED_SPECS) {
@@ -459,6 +535,7 @@
 
   const RANKING_SECTION_TW = Object.freeze({
     'Tier List': '強度排行',
+    'Hero Spec Rankings': '英雄天賦排行榜',
     'Rankings': '排行榜',
   });
 
@@ -482,9 +559,11 @@
 
   const KEY_RANGE_RE = /^\+(\d+)\s+to\s+\+(\d+)$/;
   const RELATIVE_TIME_RE = /^(\d+)\s+(second|minute|hour|day|week|month|year)s?\s+ago$/i;
-  const RANKING_HEADING_RE = /^(DPS|Tank|Healer)\s+(Tier List|Rankings)\s+for\s+(.+?)\s+(Mythic\+|Raid)$/;
+  const RANKING_HEADING_RE = /^(DPS|Tank|Healer)\s+(Tier List|Hero Spec Rankings|Rankings)\s+for\s+(.+?)\s+(Mythic\+|Raid)$/;
   // 團隊副本版：「DPS Tier List for Heroic The Venomous Abyss」
-  const RAID_RANKING_HEADING_RE = /^(DPS|Tank|Healer)\s+(Tier List|Rankings)\s+for\s+(Heroic|Normal|Mythic|LFR)\s+(.+)$/;
+  const RAID_RANKING_HEADING_RE = /^(DPS|Tank|Healer)\s+(Tier List|Hero Spec Rankings|Rankings)\s+for\s+(Heroic|Normal|Mythic|LFR)\s+(.+)$/;
+  // 地城難易度排行：「Dungeon Ease Tier List for +7 to +19 Mythic+」
+  const DUNGEON_EASE_HEADING_RE = /^Dungeon Ease Tier List for\s+(.+?)\s+(Mythic\+)$/;
   const PAGE_TITLE_RE = /^(\S+)\s+(DPS|Tank|Healer)\s+(Tier List|Rankings)\s+and\s+(Mythic\+|Raid)\s+(Tier List|Rankings)$/;
 
   /**
@@ -520,6 +599,11 @@
     if (match) {
       const range = translateKeyRange(match[3]) || match[3];
       return joinTw(range, CONTENT_TW[match[4]], ROLE_TW[match[1]], RANKING_SECTION_TW[match[2]]);
+    }
+    const easeMatch = text.match(DUNGEON_EASE_HEADING_RE);
+    if (easeMatch) {
+      const range = translateKeyRange(easeMatch[1]) || easeMatch[1];
+      return joinTw(range, CONTENT_TW[easeMatch[2]], '地城難易度強度排行');
     }
     const raidMatch = text.match(RAID_RANKING_HEADING_RE);
     if (!raidMatch) return null;
@@ -656,6 +740,18 @@
     { re: /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{1,2})$/, tw: m => `${MONTH_NUMBER[m[1]]} 月 ${m[2]} 日` },
   );
 
+  // 頁面標題 <p>：「Arcane Mage Mythic+ Rotation | Archon (WoW - Midnight)」
+  PROSE_RULES.push({
+    re: /^(.+?) (Mythic\+|Raid) (.+?) \| Archon \(WoW - (.+)\)$/,
+    tw: m => {
+      const unit = translateSpecClassPhrase(m[1]);
+      const suffix = TITLE_SUFFIX_TW[m[3]] || EXACT_TW[m[3]];
+      const expansion = EXPANSION_TW[m[4]];
+      if (!unit || !suffix || !expansion) return null;
+      return `${unit} ${CONTENT_TW[m[2]]}${suffix} | Archon（WoW - ${expansion}）`;
+    },
+  });
+
   function translateProse(text) {
     for (const rule of PROSE_RULES) {
       const match = text.match(rule.re);
@@ -765,6 +861,17 @@
     const nameTw = lookupGameName(trimmed);
     if (nameTw) {
       return text.replace(trimmed, nameTw);
+    }
+
+    // 套裝名（Primal Leywarden's Attire）等逐列登記的遊戲字串
+    const labelTw = lookupGameLabel(trimmed);
+    if (labelTw) {
+      return text.replace(trimmed, labelTw);
+    }
+
+    const heroRowTw = translateHeroSpecClassRow(trimmed);
+    if (heroRowTw) {
+      return text.replace(trimmed, heroRowTw);
     }
 
     const combinedTw = translateSpecClassPhrase(trimmed);

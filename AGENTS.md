@@ -643,6 +643,17 @@ Wowhead widget 只碰文字節點。
 - 警告句裡的消耗品名 (`Potion of Recklessness`) 還是英文: 那句話是純文字, 沒有連結
   也沒有 ID。同上, 要嘛登記 ItemSparse ID, 要嘛等 tooltip 對位機制。
 - `SimC 通知` 面板是模擬引擎輸出 (procs 假設之類), 不是站台 UI, 沒有翻。
+- 升級軌道名只有 Adventurer／Veteran／Champion 在 client 資料裡單獨成列
+  (ItemNameDescription 14528/13284/14156)。Hero 與 Myth 沒有, KeystoneLoot 字典裡的
+  「英雄」「神話」取自同季紋章名 (CurrencyTypes 3440/3441) 去掉「迷霧紋章」。
+  注意舊的 ItemNameDescription 14082 把 Myth 寫成「傳奇」, 那是舊季的字串。
+- 狩獵 (Prey) 的 Hard／Nightmare 難度名在 client 字串裡找不到, KeystoneLoot 的
+  「困難」「惡夢」是非官方譯名。
+- Ula'tek 的官方寫法是「烏拉特克」(SpellName 1288103「烏拉特克的佈道」)。
+  raidbots 的 `'Curse of Ula\'tek': '烏拉泰克的詛咒'` 寫錯了, 還沒改。
+- archon 英雄天賦排行的縮寫表 (`SPEC_ABBR`／`CLASS_ABBR`) 是照使用者回報的三列
+  推出來的, 沒有在實際頁面上看過完整一欄。footer、廣告區塊、首頁字串也還沒掃 ——
+  archon 擋 Cloudflare, 要請使用者在瀏覽器 console 跑掃描。
 
 ## 慣例
 
