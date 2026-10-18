@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         KeystoneLoot Traditional Chinese
 // @namespace    https://keystoneloot.io/
-// @version      0.5.1
+// @version      0.5.2
 // @description  Translate KeystoneLoot WoW class pages to Traditional Chinese and patch Wowhead links.
 // @author       mcc
 // @match        https://keystoneloot.io/en/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.10.2
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=4
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.10.3
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=5
 // @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/keystoneloot-tw.js?v=1.2.0
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/keystoneloot-zh-hant.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/keystoneloot-zh-hant.user.js
@@ -355,6 +355,14 @@
     return original.replace(trimmed, translated);
   }
 
+  // 連續兩個以上的英文單字視為還沒翻的句子（「Loot runs from」、
+  // 「Curse of 烏拉特克」）。單一個英文詞（SimulationCraft）不算。
+  const ENGLISH_PROSE_RE = /[A-Za-z][A-Za-z'’]*(?:[\s,]+[A-Za-z][A-Za-z'’]*){1,}/;
+
+  function hasEnglishProse(value) {
+    return ENGLISH_PROSE_RE.test(String(value || ''));
+  }
+
   function translateText(rawText) {
     const text = String(rawText || '');
     const trimmed = text.trim();
@@ -428,6 +436,10 @@
     const embeddedGameNames = translateEmbeddedGameNames(inlineTerms || workingText);
     const embeddedUnitSequences = translateEmbeddedUnitSequences(embeddedGameNames || inlineTerms || workingText);
     const longText = embeddedUnitSequences || embeddedGameNames || inlineTerms || knownNames;
+    // 逐詞替換只適合「整句已經是中文、夾著幾個英文術語」的情況。整句沒有字典時
+    // 換掉其中一兩個詞，會留下「Loot runs from 物品等級 279 on LFR」這種比原文
+    // 更難讀的半成品 —— 還剩一整段英文就寧可不動。
+    if (longText && hasEnglishProse(longText)) return null;
     if (longText && longText !== trimmed) {
       return replaceTrimmed(text, trimmed, longText);
     }
@@ -572,11 +584,13 @@
   }
 
   function translateDocumentTitle() {
-    const seasonMatch = document.title.match(/^(.+?)\s+BiS Item List\s+·\s+Season\s+(\d+)\s+·\s+KeystoneLoot$/i);
+    // 新專精（Devourer）的頁面沒有「· Season N」那一段，季數要當成可省略
+    const seasonMatch = document.title.match(/^(.+?)\s+BiS Item List(?:\s+·\s+Season\s+(\d+))?\s+·\s+KeystoneLoot$/i);
     if (seasonMatch) {
       const specTw = translateGameSequence(seasonMatch[1]);
       if (specTw) {
-        document.title = `${specTw}最佳配裝 · 第 ${seasonMatch[2]} 季 · KeystoneLoot`;
+        const season = seasonMatch[2] ? ` · 第 ${seasonMatch[2]} 季` : '';
+        document.title = `${specTw}最佳配裝${season} · KeystoneLoot`;
       }
       return;
     }

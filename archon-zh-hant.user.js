@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         Archon.gg Traditional Chinese
 // @namespace    https://www.archon.gg/
-// @version      0.13.0
+// @version      0.13.1
 // @description  Translate archon.gg WoW build pages to Traditional Chinese.
 // @author       mcc
+// @match        https://www.archon.gg/wow
 // @match        https://www.archon.gg/wow/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.10.2
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=4
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.10.3
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=5
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/archon-zh-hant.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/archon-zh-hant.user.js
 // @run-at       document-start
@@ -450,6 +451,12 @@
     'Healer': '治療者',
   });
 
+  // 英文詞夾在中文句子裡要留空格（「最完整的 DPS 排行榜」），中文詞不要
+  //（「最完整的坦克排行榜」）。
+  function padLatin(word) {
+    return /^[A-Za-z]/.test(word) ? ` ${word} ` : word;
+  }
+
   const RANKING_SECTION_TW = Object.freeze({
     'Tier List': '強度排行',
     'Rankings': '排行榜',
@@ -598,7 +605,7 @@
     },
     {
       re: /^Explore the WoW meta with our always up-to-date tier list for (.+?)\. Warcraft Logs has the best (\S+) (DPS|Tank|Healer) rankings for World of Warcraft in (Season \d+|[\d.]+)\.$/,
-      tw: m => `透過我們隨時更新的${translateContentScope(m[1])}強度排行探索 WoW 的主流。Warcraft Logs 擁有魔獸世界${EXPANSION_TW[m[2]] || m[2]}${translateSeasonOrPatch(m[4])}最完整的 ${ROLE_TW[m[3]]} 排行榜。`,
+      tw: m => `透過我們隨時更新的${translateContentScope(m[1])}強度排行探索 WoW 的主流。Warcraft Logs 擁有魔獸世界${EXPANSION_TW[m[2]] || m[2]}${translateSeasonOrPatch(m[4])}最完整的${padLatin(ROLE_TW[m[3]])}排行榜。`,
     },
   ];
 

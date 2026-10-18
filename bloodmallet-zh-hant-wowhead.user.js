@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         Bloodmallet Traditional Chinese Wowhead
 // @namespace    https://bloodmallet.com/
-// @version      0.10.2
+// @version      0.10.3
 // @description  Add zh-hant mode, switch item links/names to the zh-hant Wowhead locale, and translate class/spec labels.
 // @author       mcc
 // @match        https://bloodmallet.com/*
 // @match        http://bloodmallet.com/*
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.10.2
-// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=4
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/wowhead-tw-helper.js?v=1.10.3
+// @require      https://raw.githubusercontent.com/mcc1/WowUserScript/master/libs/game-names-tw.js?v=5
 // @updateURL    https://raw.githubusercontent.com/mcc1/WowUserScript/master/bloodmallet-zh-hant-wowhead.user.js
 // @downloadURL  https://raw.githubusercontent.com/mcc1/WowUserScript/master/bloodmallet-zh-hant-wowhead.user.js
 // @run-at       document-start
@@ -109,7 +109,8 @@
   // 這裡收的是切開後的文字節點原文；圖表說明目前只收飾品圖（最常用），
   // 其他圖表類型的說明段落仍是英文。
   const PAGE_TW = Object.freeze({
-    'Power Infusion': '能量灌注',
+    // spell=10060 的官方譯名；動詞在前，憑印象寫成「能量灌注」是錯的
+    'Power Infusion': '注入能量',
     'Trinkets': '飾品',
     'Login': '登入',
     '登录': '登入',

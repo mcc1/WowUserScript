@@ -164,6 +164,15 @@ archon 是**換掉節點**，不是改文字。查這類問題時 `childList`、
 `attributes` 三種要一起收，而且要記 `characterDataOldValue`，否則分不出哪一筆是
 站方寫的、哪一筆是自己寫的。
 
+#### 跳過規則要查到 root 的祖先, 不是只查到 root
+
+`walkTextNodes` 的 `acceptNode` 從文字節點往上檢查 `shouldSkipElement`, 到批次的
+root 就停。編輯器自己重繪時, 那一批的 root 是編輯器**裡面**的一行, 外層的
+`.cm-editor` 在 root 之上 —— 跳過規則永遠看不到它。raidbots 報告頁展開「原始插件
+輸入」後, 我們把 `hunter` 翻成獵人、CodeMirror 6 立刻寫回 `hunter`、observer 再翻,
+每秒 75 次 (2026-10-18)。另外 CM6 的 class 是 `cm-*`, 不是 CM5 的 `CodeMirror`, 而
+唯讀模式的 `isContentEditable` 是 false, 原本兩道防線都沒擋到。
+
 #### `refreshLinks(true)` 不是免費的：只在動到連結時才叫
 
 widget 的強制重掃會把頁面上**每一條**連結重新改名、重新掛圖示，每條各產生一次
@@ -234,6 +243,14 @@ Wowhead widget 改名的方式是**把整個 `innerHTML` 換成 `<span>名稱</s
 `false`。目前只有 bloodmallet 設 true，因為那邊的連結裡只有文字。**測試時不要順手加上
 它**，會得出「探針破壞了圖示」的錯誤結論（實際上是這個旗標幹的）。
 
+#### 附魔的圖示是附魔卷軸, 譯名會多帶一段前綴
+
+raidbots 最佳配裝清單的附魔標籤只印附魔名 (`Empowered Rune of Avoidance`), 旁邊的
+圖示卻是附魔卷軸 (`item=244007`, Wowhead 名稱 `Enchant Helm - Empowered Rune of
+Avoidance`)。探針拿卷軸的 zhTW 名回寫, 畫面就變成「附魔頭盔 - 強化迴避符文」。
+`collectRenameProbes` 在原文沒有 ` - ` 時把 `附魔… - ` 前綴拿掉 (helper v1.10.3)。
+購物清單本來就印全名, 原文帶 ` - `, 不受影響。
+
 #### 一段文字要配哪一個圖示 -- 配錯比沒翻更糟
 
 `findNearestWowheadIconLink()` 幫沒有連結的純文字找「它自己的」圖示, 探針再用那個
@@ -262,7 +279,7 @@ Wowhead widget 改名的方式是**把整個 `innerHTML` 換成 `<span>名稱</s
 `excludedPanelKeywords` (summary / 總覽 / bonus roll / 好運符…) 原本讓探針整塊跳過
 標題含這些字的面板。擋掉的東西是對的 -- 好運符列與 Droptimizer 的首領總覽列, 文字
 是首領或地城名, 右邊掛著那一場的一整排掉落物圖示, 配起來就是「看起來完全合理的
-錯誤資訊」。但同一條排除也擋掉了 Top Gear 的「大秘寶庫 總覽」, 那裡每一列是真的
+錯誤資訊」。但同一條排除也擋掉了 Top Gear 的「寶庫 總覽」, 那裡每一列是真的
 一件裝備, 於是整個頁面只有這一塊停在英文。
 
 `isSingleItemRow()` 把排除從「看面板標題」改成「看列的形狀」, 三條都成立才放行:
@@ -439,6 +456,12 @@ https://raw.githubusercontent.com/mcc1/WowUserScript/master/<script>.user.js?noc
   - Mythic+ = 傳奇鑰石；Raid Finder = 團隊搜尋器。
   - Power Infusion = **注入能量**（`spell=10060`）。不是「能量灌注」—— 官方是
     動詞在前，兩個字順序相反，憑印象填一定錯。
+  - Great Vault = **寶庫**（`DELVES_GREAT_VAULT_LABEL`、`GREAT_VAULT_REWARDS`「寶庫獎勵」）。
+    不是「大秘寶庫」—— 那是社群叫法，client 裡一次都沒出現過。
+  - 升級軌道 Veteran = **精兵**（ItemNameDescription 13284「精兵」，不是「老兵」）；
+    Adventurer = 冒險者、Champion = 勇士、Hero = 英雄、Myth = 神話。
+  - Delves = **探究**（`DELVES_LABEL`）；Prey = **狩獵**（寶庫獎勵說明
+    `GREAT_VAULT_REWARDS_WORLD_*`）；Prismatic socket = **多色插槽**（`EMPTY_SOCKET_PRISMATIC`）。
   - Phial = **藥瓶**（`item=191359` tooltip）；Potion = **藥水**（`item=191387`
     分類）；Enchanting = **附魔**（`spell=7411`）；專業分類作「專業法術」。
 - 暴雪沒有對應字串的少數情況（bloodmallet 的圖表類型就有兩個）：
@@ -471,7 +494,7 @@ node tools/generate-game-names.mjs --self-test   # 產生器模板
 
 - **raidbots**: Droptimizer 輸入頁 / 結果圖表 / Top Gear 卡片 / Vault 區塊 / 語言選單切換 /
   **Top Gear 報告頁**（`/simbot/report/<id>`：最佳配裝清單的品名與附魔、比較列的
-  圖示下標、變體隱藏提示、「大秘寶庫 總覽」每一列的品名）
+  圖示下標、變體隱藏提示、「寶庫 總覽」每一列的品名）
 - **archon**: build 頁的麵包屑、頁籤、天賦 tooltip
 - **bloodmallet**: `/`（spec table）、`/chart/...`（圖表 + Character profile）、`/settings/general`
 - **KeystoneLoot**: `/en/classes`、`/en/classes/warrior/arms`（職業／專精、站方 UI、裝備連結與 SPA 導航）
@@ -599,12 +622,12 @@ Wowhead widget 只碰文字節點。
 - 站名 Archon 與牧師英雄天賦 Archon (御靈者) 同名。頁首 logo 與擋廣告提示是靠
   `SKIP_CLASS_KEYWORDS` 的 `rootBreadcrumb` / `fallback__content` 擋下來的, 天賦頁的
   英雄天賦照常翻。
-- 「大秘寶庫 總覽」已於 2026-10-17 (helper v1.10.0) 放行, 走 `isSingleItemRow()`
+- 「寶庫 總覽」已於 2026-10-17 (helper v1.10.0) 放行, 走 `isSingleItemRow()`
   的形狀守則。兩邊都實地驗過: Top Gear 報告 7 列品名全部正確 (以同一列長條圖連結
   的繁中名當對照), Bonus Roll Droptimizer 報告的 `好運符 總覽` 面板 0 筆改名。
   **還沒驗到的只剩一種列**: 帶好運符伴隨模擬時長在寶庫面板裡的好運符列 (名稱是
   首領名, 圖示另掛通貨徽章 -> 同一層兩個目標)。要驗它需要一份有 bonus roll
-  companion 的 Top Gear 大秘寶庫報告。
+  companion 的 Top Gear 寶庫報告。
 - raidbots 字典缺賭博類來源的 `Gamble` / `Buy` / `Gamble/Buy`, 以及好運符列的
   `Bonus Roll · N in pool`。補之前要先在有這些欄位的報告上看過上下文。
 - `game-names-tw.js` 已於 2026-10-17 重跑 (`?v=3`), 補上 `Kith'ix` -> 克希斯 與

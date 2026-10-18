@@ -83,6 +83,16 @@ const LABEL_TABLES = [
       '1317581', // Venomcursed Ascendance
     ],
   },
+  {
+    db2: 'ItemSet',
+    column: 'Name_lang',
+    key: 'ID',
+    values: [
+      // raidbots Top Gear 的「套裝」面板標題是套裝名，旁邊掛著其中一件的圖示。
+      // 查不到譯名時探針會把它當成品名，改寫成那件飾品的名字。
+      '2070', // Bite of Zul'jan
+    ],
+  },
 ];
 
 // TraitSubTree 混有未上線的測試列，一律略過。
