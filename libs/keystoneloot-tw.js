@@ -1,6 +1,6 @@
 /**
  * KeystoneLoot Traditional Chinese Dictionary
- * @version 1.3.0
+ * @version 1.3.1
  * @description Site-owned UI strings for the KeystoneLoot Traditional Chinese UserScript.
  * @license MIT
  */
@@ -215,12 +215,12 @@
     'Earned from': '取得方式',
     // 紋章來源。寫法照 CurrencyTypes 3437–3441 的官方說明（「重複進行的戶外活動」
     // 「英雄難度賽季地城」）。Prey 的 Hard／Nightmare 難度在 client 字串裡找不到，
-    // 「困難」「惡夢」是非官方譯名。
+    // 照使用者確認的遊戲內用語「普通／困難／夢魘」（2026-10-18，與 raidbots 一致）。
     'Repeatable outdoor events': '重複進行的戶外活動',
     'Weekly outdoor events': '每週戶外活動',
     'Normal Prey Hunts': '普通難度狩獵',
     'Hard Prey Hunts': '困難難度狩獵',
-    'Nightmare Prey Hunts': '惡夢難度狩獵',
+    'Nightmare Prey Hunts': '夢魘難度狩獵',
     'Raid Finder': '團隊搜尋器',
     'Heroic seasonal dungeons': '英雄難度賽季地城',
     'Mythic seasonal dungeons': '傳奇難度賽季地城',
