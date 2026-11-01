@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Raidbots Traditional Chinese + Wowhead Patch
 // @namespace    https://www.raidbots.com/
-// @version      1.9.8
+// @version      1.9.9
 // @description  Translate Raidbots UI to Traditional Chinese and patch Wowhead links/tooltips for dynamic SPA pages.
 // @author       mcc
 // @match        https://www.raidbots.com/*
@@ -687,6 +687,8 @@
       '選擇來源後，掉落最佳化會將所有個人戰利品與你目前裝備進行比較。',
     'More info on how Droptimizer works': '更多關於掉落最佳化的運作說明',
     'How does Droptimizer work?': '掉落最佳化如何運作？',
+    // On Use 官方沒有名詞化的分類詞，沿用 bloodmallet 的「使用類」（非官方）。
+    'How are double "On Use" trinkets handled?': '兩個「使用類」飾品如何處理？',
     'Highlighted icons indicate 0.05% or better DPS increase.': '高亮圖示代表 0.05% 以上的 DPS 提升。',
     'DPS compared to your current gear.': '與目前裝備相比的 DPS。',
     'These fields allow for a proper comparison to be made for main hand / off hand items when you have a two-hander equipped':
